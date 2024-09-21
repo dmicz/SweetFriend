@@ -48,7 +48,6 @@ db = client.dexcom_db
 @app.route('/login')
 def login():
     auth_url = f"{DEXCOM_API_URL}/v2/oauth2/login?client_id={app.config['DEXCOM_CLIENT']}&redirect_uri={HTTP_PREFIX + app.config['SERVER_NAME'] + '/callback'}&response_type=code&scope=offline_access"
-    print(auth_url)
     return redirect(auth_url)
 
 @app.route('/twilio_send')
@@ -189,7 +188,9 @@ def get_glucose():
         'endDate': '2024-01-02T00:00:00'  # Adjust date range as needed
     }
     response = requests.get(glucose_url, headers=headers, params=params)
-    glucose_data = response.json()
+    glucose_data = response.json()['records']
+
+    glucose_data = [{'value': record['value'], 'displayTime': record['displayTime']} for record in glucose_data]
 
     return jsonify(glucose_data)
 
@@ -208,13 +209,19 @@ def analyze_image():
 
     base64_image = base64.b64encode(image.read()).decode('utf-8')
 
-    messages = [
+    messages = []
+    messages.append(
+        {
+            "role": "system",
+            "content": "You do not use markdown headers or bolding, just lists. You are helping diabetes patients estimate the number of carbs in their meal so they can plan and monitor their glucose levels accordingly."
+        })
+    messages.append(
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": "First, analyze the image and describe what food items are present. Then, break down the ingredients and estimate the carbs of each ingredient, then calculate the total carbs and give the name of the meal."
+                        "text": "First, analyze the image and describe what food items are present. Then, break down the ingredients and estimate the carbs of each ingredient in grams, then calculate the total carbs and give the name of the meal."
                     },
                     {
                         "type": "image_url",
@@ -224,10 +231,10 @@ def analyze_image():
                     }
                 ]
             }
-        ]
+    )
 
     data = {
-        "temperature": 0.9,
+        "temperature": 0.2,
         "messages": messages,
         "model": "openai/gpt-4o-mini",
         "stream": False,
@@ -238,17 +245,24 @@ def analyze_image():
     try:
         response = requests.post("https://proxy.tune.app/chat/completions", 
                                  headers={"Authorization": f"{app.config['TUNE_AUTH']}", "Content-Type": "application/json", "X-Org-Id": f"{app.config['TUNE_ORG_ID']}"}, 
-                                 json=data,
-                                 verify=False)
+                                 json=data)
         response.raise_for_status()
         messages.append(response.json()['choices'][0]['message'])
         messages.append(
             {
+                "role": "system",
+                "content": "You are a JSON generator. Always respond with valid json in the schema provided."
+            })
+        messages.append({
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": "Using your estimates, fill the structured output JSON with the values. Only output valid JSON according to the schema. Only output for the meal total, one entry. Do not use code blocks or anything to surround json."
+                        "text": """Using your estimates, fill the structured output JSON with the values. Only output valid JSON according to the schema. Only output for the meal total, one entry. Do not use code blocks or anything to surround json. Meal carbs must be in grams. Write in following format:
+                        {
+                    "meal_name": {"type": "string"},
+                    "total_carbs": {"type": "number"}
+                }"""
                     },
                     {
                         "type": "image_url",
@@ -259,26 +273,32 @@ def analyze_image():
                 ]
             })
         data = {
-            "temperature": 0.9,
+            "temperature": 0,
             "messages": messages,
             "model": "openai/gpt-4o-mini",
             "stream": False,
-            "frequency_penalty": 0.2,
+            "frequency_penalty": 0,
             "response-format": {
             "type": "json_object"
             },
-            "guided_json": "{\n    \"meal_name\": \"<name of meal>\",\n    \"total_carbs\": \"<total carbs in grams>\"}",
+            "guided_json": {
+                "type": "object",
+                "properties": {
+                    "meal_name": {"type": "string"},
+                    "total_carbs": {"type": "number"}
+                }
+            },
             "max_tokens": 200
         }
         try:
             response = requests.post("https://proxy.tune.app/chat/completions", 
                                     headers={"Authorization": f"{app.config['TUNE_AUTH']}", "Content-Type": "application/json", "X-Org-Id": f"{app.config['TUNE_ORG_ID']}"}, 
-                                    json=data,
-                                    verify=False)
+                                    json=data)
             response.raise_for_status()
             response_content = response.json()['choices'][0]['message']['content']
             try:
                 json_response = json.loads(response_content)
+                json_response['reason'] = messages[2]['content']
                 return jsonify(json_response)
             except json.JSONDecodeError:
                 return jsonify({"message": messages, "error": "Failed to decode JSON from response"}), 500
