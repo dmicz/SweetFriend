@@ -30,7 +30,7 @@ HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' else ''}://
 
 # Mongo client 
 client = MongoClient(app.config['MONGO_URI'])
-client = Cerebras( api_key=os.environ.get("CEREBRAS_KEY"))
+cerebras_client = Cerebras( api_key=os.environ.get("CEREBRAS_KEY"))
 
 # Send a ping to confirm a successful connection
 try: 
@@ -56,7 +56,7 @@ def login():
 def twilio_send():
     message = twilio_client.messages.create(
         from_='+18449053950',
-        body='SweetFriend: Your glucose level is low and falling. Have a snack with around 15-20g of carbs.',
+        body='Hello from Twilio (Flask)',
         to='+16467976340'
     )
     
@@ -179,18 +179,22 @@ def fetch_and_store_calibrations(access_token):
 
 @app.route('/api/get_glucose')
 def get_glucose():
-    headers = {'Authorization': f'Bearer {app.config['DEXCOM_ACCESS_TOKEN']}'}
-    glucose_url = f'{DEXCOM_API_URL}/v3/users/self/egvs'
-    params = {
-        'startDate': '2024-01-01T00:00:00',
-        'endDate': '2024-01-02T00:00:00'  # Adjust date range as needed
-    }
-    response = requests.get(glucose_url, headers=headers, params=params)
-    glucose_data = response.json()['records']
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT * FROM glucose_readings
+    ''')
+    rows = cur.fetchall()
 
-    glucose_data = [{'value': record['value'], 'displayTime': record['displayTime']} for record in glucose_data]
-    
-    return jsonify(glucose_data)
+    column_names = [desc[0] for desc in cur.description]
+
+    results = []
+    for row in rows:
+        results.append(dict(zip(column_names, row)))
+
+    cur.close()
+    conn.close()
+    return jsonify(results)
 
 # ==========================
 # Existing Routes for Image Upload
@@ -211,20 +215,15 @@ def analyze_image():
 
     base64_image = base64.b64encode(image.read()).decode('utf-8')
 
-
-    messages = []
-    messages.append(
-        {
-            "role": "system",
-            "content": "You do not use markdown headers or bolding, just lists. You are helping diabetes patients estimate the number of carbs in their meal so they can plan and monitor their glucose levels accordingly."
-        })
-    messages.append(
+    data = {
+        "temperature": 0.9,
+        "messages": [
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": "First, analyze the image and describe what food items are present. Then, break down the ingredients and estimate the carbs of each ingredient in grams, then calculate the total carbs and give the name of the meal."
+                        "text": "What do you see?"
                     },
                     {
                         "type": "image_url",
@@ -234,11 +233,7 @@ def analyze_image():
                     }
                 ]
             }
-    )
-
-    data = {
-        "temperature": 0.2,
-        "messages": messages,
+        ],
         "model": "openai/gpt-4o-mini",
         "stream": False,
         "frequency_penalty": 0.2,
@@ -248,67 +243,12 @@ def analyze_image():
     try:
         response = requests.post("https://proxy.tune.app/chat/completions", 
                                  headers={"Authorization": f"{app.config['TUNE_AUTH']}", "Content-Type": "application/json", "X-Org-Id": f"{app.config['TUNE_ORG_ID']}"}, 
-                                 json=data)
+                                 json=data,
+                                 verify=False)
         response.raise_for_status()
-        messages.append(response.json()['choices'][0]['message'])
-        messages.append(
-            {
-                "role": "system",
-                "content": "You are a JSON generator. Always respond with valid json in the schema provided."
-            })
-        messages.append({
-                "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": """Using your estimates, fill the structured output JSON with the values. Only output valid JSON according to the schema. Only output for the meal total, one entry. Do not use code blocks or anything to surround json. Meal carbs must be in grams. Write in following format:
-                        {
-                    "meal_name": {"type": "string"},
-                    "total_carbs": {"type": "number"}
-                }"""
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}"
-                        }
-                    }
-                ]
-            })
-        data = {
-            "temperature": 0,
-            "messages": messages,
-            "model": "openai/gpt-4o-mini",
-            "stream": False,
-            "frequency_penalty": 0,
-            "response-format": {
-            "type": "json_object"
-            },
-            "guided_json": {
-                "type": "object",
-                "properties": {
-                    "meal_name": {"type": "string"},
-                    "total_carbs": {"type": "number"}
-                }
-            },
-            "max_tokens": 200
-        }
-        try:
-            response = requests.post("https://proxy.tune.app/chat/completions", 
-                                    headers={"Authorization": f"{app.config['TUNE_AUTH']}", "Content-Type": "application/json", "X-Org-Id": f"{app.config['TUNE_ORG_ID']}"}, 
-                                    json=data)
-            response.raise_for_status()
-            response_content = response.json()['choices'][0]['message']['content']
-            try:
-                json_response = json.loads(response_content)
-                json_response['reason'] = messages[2]['content']
-                return jsonify(json_response)
-            except json.JSONDecodeError:
-                return jsonify({"message": messages, "error": "Failed to decode JSON from response"}), 500
-        except requests.exceptions.RequestException as e:
-            return jsonify({"message": messages, "error": str(e)}), 500
+        return jsonify(response.json())
     except requests.exceptions.RequestException as e:
-        return jsonify({"message": messages, "error": str(e)}), 500
+        return jsonify({"error": str(e)}), 500
 
 
 ## Suggestion AI 
@@ -331,8 +271,73 @@ async def get_ai_advice(glucose_level, recent_events):
         return chat_completion.choices[0].message.content
     except Exception as e:
         print(f"Error calling Cerebras API: {e}")
-    return "Sorry, I couuldn't generate advice at this time."
+    return "Sorry, I couldn't generate advice at this time."
 
+
+## chat bot 
+def get_recent_data(user_id):
+    #Fetch recent glucose readings
+
+    recent_glucose = list(db.glucose_readings.find(
+        {user_id: user_id}
+    ).sort("system_time",-1).limit(10))
+
+    #Fetch recent events
+    recent_events = list(db.dexcom_events.find(
+        {
+            "user_id": user_id
+        }.sort('system_time', -1).limit(10)
+    ))
+
+    return recent_glucose, recent_events
+
+@app.route('/api/chat', methods = ['POST'])
+async def chat():
+    data = request.json
+    user_id = data.get('user_id')
+    user_message = data.get('message')
+
+    if not user_id or not user_message:
+        return jsonify({"error" "User ID and message are required"}), 400
+    
+    # Fetch recent data for context
+    recent_glucose, recent_events = get_recent_data(user_id)
+
+    context = f"Recent glucose readings: {recent_glucose}\nRecent events: {recent_events}\n\n"
+
+    try:
+        chat_completion = await cerebras_client.chat.completions.create(
+            model = "llama3.1-8b",
+            messages = [
+                {
+                    "role": "system",
+                    "content": " You are an AI assistant specialized in providing friendly, non-medical advice about managing glucose levels, diet, and lifestyle for people with diabetes. Use the provided context about recent glucose readings and events to give personalized suggestions. Always remind users to consult with their healthcare provider for medical advice."
+                },
+                {
+                    "role": "user",
+                    "content": f"{context}User asks: {user_message}"
+                }
+            ],
+            max_tokens = 300
+        )
+
+        ai_response = chat_completion.choices[0].message.content
+
+        # Store conversation in the database
+
+        db.conversations.insert_one({
+            "user_id": user_id,
+            "timestamp": datetime.now(),
+            "user_message": user_message,
+            "ai_response": ai_response
+        })
+
+        return jsonify({"response": ai_response})
+    
+    except Exception as e:
+        print(f"Error calling Cerebras API: {e}")
+        return jsonify({"error": "Sorry I couldn't generate a response at this time"}), 500
+    
 @app.route('api/get_advice', methods = ['POST'])
 async def get_advice():
     data = request.json
@@ -359,44 +364,8 @@ def home():
     
     return render_template("docs.html", routes=routes)
 
-def log_food_entry(meal_name, meal_time, total_carbs):
-    food_entry = {
-        'meal_name': meal_name,
-        'meal_time': meal_time,
-        'total_carbs': total_carbs
-    }
-    db.food_entries.insert_one(food_entry)
-    return food_entry
 
-def log_exercise_entry(exercise_name, exercise_time, time_spent, intensity_level):
-    exercise_entry = {
-        'exercise_name': exercise_name,
-        'exercise_time': exercise_time,
-        'time_spent': time_spent,
-        'intensity_level': intensity_level
-    }
-    db.exercise_entries.insert_one(exercise_entry)
-    return exercise_entry
-
-@app.route('/api/food_entry', methods=['POST'])
-def food_entry():
-    data = request.json
-    meal_name = data['meal_name']
-    meal_time = data['meal_time']
-    total_carbs = data['total_carbs']
-    
-    entry = log_food_entry(meal_name, meal_time, total_carbs)
-    
-    return jsonify({'status': 'success', 'entry': entry})
-
-@app.route('/api/exercise_entry', methods=['POST'])
-def exercise_entry():
-    data = request.json
-    exercise_name = data['exercise_name']
-    exercise_time = data['exercise_time']
-    time_spent = data['time_spent']
-    intensity_level = data['intensity_level']
-    
-    entry = log_exercise_entry(exercise_name, exercise_time, time_spent, intensity_level)
-    
-    return jsonify({'status': 'success', 'entry': entry})
+@app.route('/api/json')
+def json_test():
+    data = {'message': 'test', 'status': 200}
+    return jsonify(data)
