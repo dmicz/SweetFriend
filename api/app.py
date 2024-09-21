@@ -138,6 +138,25 @@ def fetch_and_store_calibrations(access_token):
     conn.commit()
     conn.close()
 
+@app.route('/api/get_glucose')
+def get_glucose():
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT * FROM glucose_readings
+    ''')
+    rows = cur.fetchall()
+
+    column_names = [desc[0] for desc in cur.description]
+
+    results = []
+    for row in rows:
+        results.append(dict(zip(column_names, row)))
+
+    cur.close()
+    conn.close()
+    return jsonify(results)
+
 # ==========================
 # Existing Routes for Image Upload
 # ==========================
