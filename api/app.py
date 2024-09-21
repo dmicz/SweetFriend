@@ -5,19 +5,41 @@ import base64
 import json
 import sqlite3
 import os
+from pymongo.mongo_client import MongoClient 
+from bson import ObjectId
+from datetime import datetime
 
 app = Flask(__name__)
 if os.environ.get('VERCEL', None) != "True":
-    app.config.from_file('config.json', load=json.load)
+    app.config.from_file('config.json', load=json.load) 
 else:
     app.config['TWILIO_AUTH_TOKEN'] = os.environ['TWILIO_AUTH_TOKEN']
     app.config['TWILIO_ACCOUNT_SID'] = os.environ['TWILIO_ACCOUNT_SID']
     app.config['DEXCOM_CLIENT_SECRET'] = os.environ['DEXCOM_CLIENT_SECRET']
     app.config['DEXCOM_CLIENT'] = os.environ['DEXCOM_CLIENT']
     app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'localhost:5000')
+    app.config['MONGO_PASSWORD'] = os.environ.get('MONGO_PASSWORD')
+
+# Set up Mongo URI
+app.config['MONGO_URI'] = f"mongodb+srv://dennismiczek:{app.config['MONGO_PASSWORD']}@sweetfriendcluster.yzcni.mongodb.net/?retryWrites=true&w=majority&appName=SweetFriendCluster"
+twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
 
 DEXCOM_API_URL = 'https://sandbox-api.dexcom.com'
-HTTP_PREFIX = f"http{'s' if (app.config['SERVER_NAME'][:5] != 'local' and app.config['SERVER_NAME'][:3] != '127') else ''}://"
+HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' and app.config['SERVER_NAME'][:3] != '127' else ''}://"
+
+# Mongo client 
+client = MongoClient(app.config['MONGO_URI'])
+
+# Send a ping to confirm a su ccessful connection
+try: 
+    client.admin.command('ping')
+    print("Pinged your deployment. You successfully connected to MongoDB!")
+except Exception as e:
+    print(e)
+
+# Select the database
+    
+db = client.dexcom_db
 
 # ==========================
 # Dexcom API: OAuth2 and Data Fetching
@@ -26,6 +48,7 @@ HTTP_PREFIX = f"http{'s' if (app.config['SERVER_NAME'][:5] != 'local' and app.co
 @app.route('/login')
 def login():
     auth_url = f"{DEXCOM_API_URL}/v2/oauth2/login?client_id={app.config['DEXCOM_CLIENT']}&redirect_uri={HTTP_PREFIX + app.config['SERVER_NAME'] + '/callback'}&response_type=code&scope=offline_access"
+    print(auth_url)
     return redirect(auth_url)
 
 @app.route('/twilio_send')
@@ -54,15 +77,18 @@ def callback():
     response = requests.post(token_url, data=data)
     tokens = response.json()
     access_token = tokens['access_token']
+    app.config['DEXCOM_ACCESS_TOKEN'] = access_token
     
     # Store glucose readings, events, alerts, and calibrations
-    fetch_and_store_glucose(access_token)
-    fetch_and_store_events(access_token)
-    fetch_and_store_alerts(access_token)
-    fetch_and_store_calibrations(access_token)
+    def fetch_all_dexcom_data(access_token):
+        fetch_and_store_glucose(access_token)
+        fetch_and_store_events(access_token)
+        fetch_and_store_alerts(access_token)
+        fetch_and_store_calibrations(access_token)
+
+    fetch_all_dexcom_data(access_token)
 
     return jsonify({'message': 'Data fetched and stored successfully'})
-
 
 def get_db_connection():
     conn = sqlite3.connect('glucose_data.db')
@@ -82,14 +108,15 @@ def fetch_and_store_glucose(access_token):
     response = requests.get(glucose_url, headers=headers, params=params)
     glucose_data = response.json()
 
-    conn = get_db_connection()
-    for reading in glucose_data['records']:
-        conn.execute('''
-            INSERT INTO glucose_readings (system_time, display_time, glucose_value, trend, trend_rate)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (reading['systemTime'], reading['displayTime'], reading['value'], reading['trend'], reading['trendRate']))
-    conn.commit()
-    conn.close()
+    for reading in glucose_data.get('records', []):
+        db.glucose_readings.insert_one({
+            'system_time': reading['systemTime'],
+            'display_time': reading['displayTime'],
+            'glucose_value': reading['value'],
+            'trend': reading['trend'],
+            'trend_rate': reading['trendRate']
+        })
+        
 
 def fetch_and_store_events(access_token):
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -101,15 +128,17 @@ def fetch_and_store_events(access_token):
     response = requests.get(events_url, headers=headers, params=params)
     event_data = response.json()
 
-    conn = get_db_connection()
-    for event in event_data['records']:
-        print(event)
-        conn.execute('''
-            INSERT INTO dexcom_events (record_id, system_time, display_time, event_type, event_sub_type, value, unit, event_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (event['recordId'], event['systemTime'], event['displayTime'], event['eventType'], event.get('eventSubType', ""), event['value'], event['unit'], event['eventStatus']))
-    conn.commit()
-    conn.close()
+    for event in event_data.get('records', []):
+        db.dexcom_events.insert_one({
+            'system_time': event['systemTime'],
+            'display_time': event['displayTime'],
+            'event_type': event['eventType'],
+            'event_sub_type': event.get('eventSubType', ''),
+            'value': event['value'],
+            'unit': event['unit'],
+            'event_status': event['eventStatus']
+        })
+
 
 def fetch_and_store_alerts(access_token):
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -121,14 +150,16 @@ def fetch_and_store_alerts(access_token):
     response = requests.get(alerts_url, headers=headers, params=params)
     alert_data = response.json()
 
-    conn = get_db_connection()
-    for alert in alert_data['records']:
-        conn.execute('''
-            INSERT INTO glucose_alerts (alert_id, system_time, display_time, alert_type, alert_value, unit, alert_status)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-        ''', (alert['alertId'], alert['systemTime'], alert['displayTime'], alert['alertType'], alert['alertValue'], alert['unit'], alert['alertStatus']))
-    conn.commit()
-    conn.close()
+    for alert in alert_data.get('records', []):
+        db.glucose_alerts.insert_one({
+            'alert_id': alert['alertId'],
+            'system_time': alert['systemTime'],
+            'display_time': alert['displayTime'],
+            'alert_type': alert['alertType'],
+            'alert_value': alert['alertValue'],
+            'unit': alert['unit'],
+            'alert_status': alert['alertStatus']
+        })
 
 def fetch_and_store_calibrations(access_token):
     headers = {'Authorization': f'Bearer {access_token}'}
@@ -140,33 +171,27 @@ def fetch_and_store_calibrations(access_token):
     response = requests.get(calibrations_url, headers=headers, params=params)
     calibration_data = response.json()
 
-    conn = get_db_connection()
-    for calibration in calibration_data['records']:
-        conn.execute('''
-            INSERT INTO calibrations (system_time, display_time, glucose_value, unit, calibration_status)
-            VALUES (?, ?, ?, ?, ?)
-        ''', (calibration['systemTime'], calibration['displayTime'], calibration['value'], calibration['unit'], ""))
-    conn.commit()
-    conn.close()
+    for calibration in calibration_data.get('records', []):
+        db.calibrations.insert_one({
+            'system_time': calibration['systemTime'],
+            'display_time': calibration['displayTime'],
+            'glucose_value': calibration['value'],
+            'unit': calibration['unit'],
+            'calibration_status': calibration.get('calibrationStatus', '')
+        })
 
 @app.route('/api/get_glucose')
 def get_glucose():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT * FROM glucose_readings
-    ''')
-    rows = cur.fetchall()
+    headers = {'Authorization': f'Bearer {app.config['DEXCOM_ACCESS_TOKEN']}'}
+    glucose_url = f'{DEXCOM_API_URL}/v3/users/self/egvs'
+    params = {
+        'startDate': '2024-01-01T00:00:00',
+        'endDate': '2024-01-02T00:00:00'  # Adjust date range as needed
+    }
+    response = requests.get(glucose_url, headers=headers, params=params)
+    glucose_data = response.json()
 
-    column_names = [desc[0] for desc in cur.description]
-
-    results = []
-    for row in rows:
-        results.append(dict(zip(column_names, row)))
-
-    cur.close()
-    conn.close()
-    return jsonify(results)
+    return jsonify(glucose_data)
 
 @app.route('/')
 def upload_form():
