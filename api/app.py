@@ -1,22 +1,15 @@
-from flask import Flask, jsonify, render_template, redirect, request, url_for
-from werkzeug.utils import secure_filename
+from flask import Flask, jsonify, request, render_template, redirect
 import requests
-import os
-import sqlite3
-from datetime import datetime
+import base64
+import json
 
-app = Flask(__name__, static_url_path='/static', static_folder='../static')
-app.config['UPLOAD_FOLDER'] = 'static/uploads'
-app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024
+app = Flask(__name__)
+app.config.from_file('config.json', load=json.load)
 
 CLIENT_ID = '<your_client_id>'
 CLIENT_SECRET = '<your_client_secret>'
 REDIRECT_URI = 'http://localhost:5000/callback'
 DEXCOM_API_URL = 'https://api.dexcom.com/v3'
-
-# Initialize the upload folder if it doesn't exist
-if not os.path.exists(app.config['UPLOAD_FOLDER']):
-    os.makedirs(app.config['UPLOAD_FOLDER'])
 
 # ==========================
 # Dexcom API: OAuth2 and Data Fetching
@@ -141,46 +134,54 @@ def fetch_and_store_calibrations(access_token):
 
 @app.route('/')
 def upload_form():
-    return render_template("test_image_upload.html", image_urls=get_image_urls())
+    return render_template("test_image_upload.html")
 
-def get_image_urls():
-    files = os.listdir(app.config['UPLOAD_FOLDER'])
-    files.sort(key=lambda x: os.path.getctime(os.path.join(app.config['UPLOAD_FOLDER'], x)), reverse=True)
-    return [url_for('static', filename=f'uploads/{file}') for file in files]
-
-def allowed_file(filename):
-    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def delete_oldest_file():
-    files = [os.path.join(app.config['UPLOAD_FOLDER'], f) for f in os.listdir(app.config['UPLOAD_FOLDER']) if os.path.isfile(os.path.join(app.config['UPLOAD_FOLDER'], f))]
-    
-    if len(files) > 5:
-        oldest_file = min(files, key=os.path.getctime)
-        os.remove(oldest_file)
-
-@app.route('/upload', methods=['POST'])
-def upload_file():
+@app.route('/api/analyze_image', methods=['POST'])
+def analyze_image():
     if 'file' not in request.files:
-        return redirect(request.url)
-    
-    file = request.files['file']
-    
-    if file.filename == '':
-        return redirect(request.url)
-    
-    if file and allowed_file(file.filename):
-        filename = secure_filename(file.filename)
-        filename = f"{datetime.now().strftime('%Y%m%d%H%M%S')}_{filename}"
-        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
-        
-        # Save the file
-        file.save(file_path)
-        
-        delete_oldest_file()
-        
-        return redirect(url_for('upload_form'))
-    
-    return redirect(request.url)
+        return jsonify({"error": "No file uploaded"}), 400
+
+    image = request.files['file']
+    if image.filename == '':
+        return jsonify({"error": "No selected file"}), 400
+
+    base64_image = base64.b64encode(image.read()).decode('utf-8')
+
+    data = {
+        "temperature": 0.9,
+        "messages": [
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "What do you see?"
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                    }
+                ]
+            }
+        ],
+        "model": "openai/gpt-4o-mini",
+        "stream": False,
+        "frequency_penalty": 0.2,
+        "max_tokens": 200
+    }
+
+    try:
+        response = requests.post("https://proxy.tune.app/chat/completions", 
+                                 headers={"Authorization": f"{app.config['TUNE_AUTH']}", "Content-Type": "application/json", "X-Org-Id": f"{app.config['TUNE_ORG_ID']}"}, 
+                                 json=data,
+                                 verify=False)
+        response.raise_for_status()
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
 
 @app.route('/api/')
 def home():
@@ -200,10 +201,3 @@ def home():
 def json_test():
     data = {'message': 'test', 'status': 200}
     return jsonify(data)
-
-@app.route('/api/analyze_image')
-def analyze_image():
-    pass
-
-if __name__ == "__main__":
-    app.run(debug=True)

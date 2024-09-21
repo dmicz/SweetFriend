@@ -2,3 +2,4 @@
 .vercel
 */__pycache__
 static/uploads/*
+api/config.json
