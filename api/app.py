@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request, render_template, redirect
+from twilio.rest import Client
 import requests
 import base64
 import json
@@ -27,13 +28,13 @@ DEXCOM_API_URLv2 = 'https://sandbox-api.dexcom.com/v2'
 
 @app.route('/login')
 def login():
-    auth_url = f"{DEXCOM_API_URLv2}/oauth2/login?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope=offline_access"
+    auth_url = f"{DEXCOM_API_URL}/v2/oauth2/login?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope=offline_access"
     return redirect(auth_url)
 
 @app.route('/callback')
 def callback():
     code = request.args.get('code')
-    token_url = f'{DEXCOM_API_URLv2}/oauth2/token'
+    token_url = f'{DEXCOM_API_URL}/v2/oauth2/token'
     data = {
         'client_id': CLIENT_ID,
         'client_secret': CLIENT_SECRET,
@@ -80,7 +81,7 @@ if __name__ == '__main__':
 
 def fetch_and_store_glucose(access_token):
     headers = {'Authorization': f'Bearer {access_token}'}
-    glucose_url = f'{DEXCOM_API_URL}/users/self/egvs'
+    glucose_url = f'{DEXCOM_API_URL}/v3/users/self/egvs'
     params = {
         'startDate': '2024-01-01T00:00:00',
         'endDate': '2024-01-02T00:00:00'  # Adjust date range as needed
@@ -99,7 +100,7 @@ def fetch_and_store_glucose(access_token):
 
 def fetch_and_store_events(access_token):
     headers = {'Authorization': f'Bearer {access_token}'}
-    events_url = f'{DEXCOM_API_URL}/users/self/events'
+    events_url = f'{DEXCOM_API_URL}/v3/users/self/events'
     params = {
         'startDate': '2024-01-01T00:00:00',
         'endDate': '2024-01-02T00:00:00'
@@ -119,7 +120,7 @@ def fetch_and_store_events(access_token):
 
 def fetch_and_store_alerts(access_token):
     headers = {'Authorization': f'Bearer {access_token}'}
-    alerts_url = f'{DEXCOM_API_URL}/users/self/alerts'
+    alerts_url = f'{DEXCOM_API_URL}/v3/users/self/alerts'
     params = {
         'startDate': '2024-01-01T00:00:00',
         'endDate': '2024-01-02T00:00:00'
@@ -138,7 +139,7 @@ def fetch_and_store_alerts(access_token):
 
 def fetch_and_store_calibrations(access_token):
     headers = {'Authorization': f'Bearer {access_token}'}
-    calibrations_url = f'{DEXCOM_API_URL}/users/self/calibrations'
+    calibrations_url = f'{DEXCOM_API_URL}/v3/users/self/calibrations'
     params = {
         'startDate': '2024-01-01T00:00:00',
         'endDate': '2024-01-02T00:00:00'
