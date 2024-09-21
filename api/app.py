@@ -7,8 +7,8 @@ import sqlite3
 app = Flask(__name__)
 app.config.from_file('config.json', load=json.load)
 
-CLIENT_ID = '<your_client_id>'
-CLIENT_SECRET = '<your_client_secret>'
+CLIENT_ID = app.config['DEXCOM_CLIENT']
+CLIENT_SECRET = app.config['DEXCOM_CLIENT_SECRET']
 REDIRECT_URI = 'http://localhost:5000/callback'
 DEXCOM_API_URL = 'https://api.dexcom.com/v3'
 
