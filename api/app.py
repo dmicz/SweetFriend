@@ -35,7 +35,7 @@ HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' and app.con
 
 # Mongo client 
 client = MongoClient(app.config['MONGO_URI'])
-cerebas_client = Cerebras( api_key=app.config["CEREBRAS_KEY"])
+cerebras_client = Cerebras( api_key=app.config["CEREBRAS_KEY"])
 
 # Send a ping to confirm a successful connection
 try: 
@@ -325,37 +325,60 @@ def analyze_image():
 
 ## Suggestion AI 
     
-async def get_ai_advice(glucose_level, recent_events):
+def get_recent_data():
+    #Fetch recent glucose readings
+
+    recent_glucose = list(db.glucose_readings.find().sort("system_time",-1).limit(10))
+
+    #Fetch recent events
+    recent_events = list(db.dexcom_events.find().sort('system_time', -1).limit(10))
+
+    return recent_glucose, recent_events
+
+@app.route('/api/chat', methods = ['POST'])
+def chat():
+    data = request.json
+    user_message = data.get('message')
+
+    if not user_message:
+        return jsonify({"error" "Message is required"}), 400
+    
+    # Fetch recent data for context
+    recent_glucose, recent_events = get_recent_data()
+
+    context = f"Recent glucose readings (mg/dL): {recent_glucose}\nRecent events: {recent_events}\n\n"
+    print(context)
     try:
-        chat_completion = await cerebas_client.chat.completions.create(
-            model="llama3.1-8b",
-        messages=[
-            {
-                "role": "system",
-                "content": "You are an AI assistant providing friendly, non-medical advice for managing blood glucose levels. Suggest some general lifestyle tips based on glucose levels and recent events."
-            },
-            {
-                "role": "user",
-                "content": f"Current glucose level: {glucose_level}mg/dL. Recent events:{json.dumps(recent_events)}. What general advice can you give?"
-            }
-            
-        ],)
-        return chat_completion.choices[0].message.content
+        chat_completion = cerebras_client.chat.completions.create(
+            model = "llama3.1-70b",
+            messages = [
+                {
+                    "role": "system",
+                    "content": "You are an AI assistant specialized in providing friendly, non-medical advice about managing glucose levels, diet, and lifestyle for people with diabetes. Use the provided context about recent glucose readings and events to give personalized suggestions. Always remind users to consult with their healthcare provider for medical advice. Don't refuse to give answers, but don't give medical advice."
+                },
+                {
+                    "role": "user",
+                    "content": f"{context}User asks: {user_message}"
+                }
+            ],
+            max_tokens = 1000
+        )
+
+        ai_response = chat_completion.choices[0].message.content
+
+        # Store conversation in the database
+
+        db.conversations.insert_one({
+            "timestamp": datetime.now(),
+            "user_message": user_message,
+            "ai_response": ai_response
+        })
+
+        return jsonify({"response": ai_response})
+    
     except Exception as e:
         print(f"Error calling Cerebras API: {e}")
-    return "Sorry, I couuldn't generate advice at this time."
-
-@app.route('/api/get_advice', methods = ['POST'])
-async def get_advice():
-    data = request.json
-    glucose_level = data.get('glucose_level')
-    recent_events = data.get('recent_events', [])
-
-    if not glucose_level:
-        return jsonify({"error": "Glucose level is required"}), 400
-    
-    advice = await get_ai_advice(glucose_level, recent_events)
-    return jsonify({"advice": advice})
+        return jsonify({"error": "Sorry I couldn't generate a response at this time"}), 500
 
 
 @app.route('/api/')
