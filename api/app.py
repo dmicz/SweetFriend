@@ -17,7 +17,7 @@ else:
     app.config['TWILIO_ACCOUNT_SID'] = os.environ['TWILIO_ACCOUNT_SID']
     app.config['DEXCOM_CLIENT_SECRET'] = os.environ['DEXCOM_CLIENT_SECRET']
     app.config['DEXCOM_CLIENT'] = os.environ['DEXCOM_CLIENT']
-    app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'http://localhost:5000')
+    app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'localhost:5000')
     app.config['MONGO_PASSWORD'] = os.environ.get('MONGO_PASSWORD')
 
 # Set up Mongo URI
@@ -25,7 +25,7 @@ app.config['MONGO_URI'] = f"mongodb+srv://dennismiczek:{app.config['MONGO_PASSWO
 twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
 
 DEXCOM_API_URL = 'https://sandbox-api.dexcom.com'
-HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' else ''}://"
+HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' and app.config['SERVER_NAME'][:3] != '127' else ''}://"
 
 # Mongo client 
 client = MongoClient(app.config['MONGO_URI'])
@@ -48,6 +48,7 @@ db = client.dexcom_db
 @app.route('/login')
 def login():
     auth_url = f"{DEXCOM_API_URL}/v2/oauth2/login?client_id={app.config['DEXCOM_CLIENT']}&redirect_uri={HTTP_PREFIX + app.config['SERVER_NAME'] + '/callback'}&response_type=code&scope=offline_access"
+    print(auth_url)
     return redirect(auth_url)
 
 @app.route('/twilio_send')
@@ -76,12 +77,15 @@ def callback():
     access_token = tokens['access_token']
     
     # Store glucose readings, events, alerts, and calibrations
-    def fetch_all_dexcom_data(access_token, db):
-        fetch_and_store_glucose(access_token, db)
-        fetch_and_store_events(access_token, db)
-        fetch_and_store_alerts(access_token, db)
-        fetch_and_store_calibrations(access_token, db)
+    def fetch_all_dexcom_data(access_token):
+        fetch_and_store_glucose(access_token)
+        fetch_and_store_events(access_token)
+        fetch_and_store_alerts(access_token)
+        fetch_and_store_calibrations(access_token)
 
+    fetch_all_dexcom_data(access_token)
+
+    return jsonify({'message': 'Data fetched and stored successfully'})
 
 def get_db_connection():
     conn = sqlite3.connect('glucose_data.db')
