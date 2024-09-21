@@ -1,4 +1,4 @@
-from flask import Flask, jsonify
+from flask import Flask, jsonify, render_template_string, render_template
 import json
 
 app = Flask(__name__)
@@ -13,7 +13,8 @@ def home():
             'methods': methods,
             'url': str(rule)
         })
-    return jsonify(routes)
+    
+    return render_template("docs.html", routes=routes)
 
 
 @app.route('/api/json')
