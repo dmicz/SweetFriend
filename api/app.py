@@ -19,6 +19,7 @@ else:
 twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
 
 DEXCOM_API_URL = 'https://sandbox-api.dexcom.com'
+HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' else ''}://"
 
 # ==========================
 # Dexcom API: OAuth2 and Data Fetching
@@ -26,7 +27,7 @@ DEXCOM_API_URL = 'https://sandbox-api.dexcom.com'
 
 @app.route('/login')
 def login():
-    auth_url = f"{DEXCOM_API_URL}/v2/oauth2/login?client_id={app.config['DEXCOM_CLIENT']}&redirect_uri={'http://' + app.config['SERVER_NAME'] + '/callback'}&response_type=code&scope=offline_access"
+    auth_url = f"{DEXCOM_API_URL}/v2/oauth2/login?client_id={app.config['DEXCOM_CLIENT']}&redirect_uri={HTTP_PREFIX + app.config['SERVER_NAME'] + '/callback'}&response_type=code&scope=offline_access"
     return redirect(auth_url)
 
 @app.route('/twilio_send')
@@ -48,7 +49,7 @@ def callback():
         'client_secret': app.config['DEXCOM_CLIENT_SECRET'],
         'code': code,
         'grant_type': 'authorization_code',
-        'redirect_uri': 'http://' + app.config['SERVER_NAME'] + '/callback'
+        'redirect_uri': HTTP_PREFIX + app.config['SERVER_NAME'] + '/callback'
     }
     response = requests.post(token_url, data=data)
     tokens = response.json()
