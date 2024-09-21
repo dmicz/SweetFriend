@@ -183,15 +183,13 @@ def analyze_image():
 
     base64_image = base64.b64encode(image.read()).decode('utf-8')
 
-    data = {
-        "temperature": 0.9,
-        "messages": [
+    messages = [
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": "What do you see?"
+                        "text": "First, analyze the image and describe what food items are present. Then, break down the ingredients and estimate the carbs of each ingredient, then calculate the total carbs and give the name of the meal."
                     },
                     {
                         "type": "image_url",
@@ -201,11 +199,15 @@ def analyze_image():
                     }
                 ]
             }
-        ],
+        ]
+
+    data = {
+        "temperature": 0.9,
+        "messages": messages,
         "model": "openai/gpt-4o-mini",
         "stream": False,
         "frequency_penalty": 0.2,
-        "max_tokens": 200
+        "max_tokens": 2000
     }
 
     try:
@@ -214,9 +216,51 @@ def analyze_image():
                                  json=data,
                                  verify=False)
         response.raise_for_status()
-        return jsonify(response.json())
+        messages.append(response.json()['choices'][0]['message'])
+        messages.append(
+            {
+                "role": "user",
+                "content": [
+                    {
+                        "type": "text",
+                        "text": "Using your estimates, fill the structured output JSON with the values. Only output valid JSON according to the schema. Only output for the meal total, one entry. Do not use code blocks or anything to surround json."
+                    },
+                    {
+                        "type": "image_url",
+                        "image_url": {
+                            "url": f"data:image/jpeg;base64,{base64_image}"
+                        }
+                    }
+                ]
+            })
+        data = {
+            "temperature": 0.9,
+            "messages": messages,
+            "model": "openai/gpt-4o-mini",
+            "stream": False,
+            "frequency_penalty": 0.2,
+            "response-format": {
+            "type": "json_object"
+            },
+            "guided_json": "{\n    \"meal_name\": \"<name of meal>\",\n    \"total_carbs\": \"<total carbs in grams>\"}",
+            "max_tokens": 200
+        }
+        try:
+            response = requests.post("https://proxy.tune.app/chat/completions", 
+                                    headers={"Authorization": f"{app.config['TUNE_AUTH']}", "Content-Type": "application/json", "X-Org-Id": f"{app.config['TUNE_ORG_ID']}"}, 
+                                    json=data,
+                                    verify=False)
+            response.raise_for_status()
+            response_content = response.json()['choices'][0]['message']['content']
+            try:
+                json_response = json.loads(response_content)
+                return jsonify(json_response)
+            except json.JSONDecodeError:
+                return jsonify({"message": messages, "error": "Failed to decode JSON from response"}), 500
+        except requests.exceptions.RequestException as e:
+            return jsonify({"message": messages, "error": str(e)}), 500
     except requests.exceptions.RequestException as e:
-        return jsonify({"error": str(e)}), 500
+        return jsonify({"message": messages, "error": str(e)}), 500
 
 
 @app.route('/api/')
