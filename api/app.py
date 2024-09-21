@@ -94,7 +94,7 @@ def get_db_connection():
     return conn
 
 # ==========================
-# Fetch Data from Dexcom and Store in SQLite
+# Fetch Data from Dexcom and Store in MongoDB
 # ==========================
 
 def fetch_and_store_glucose(access_token):
@@ -321,8 +321,44 @@ def home():
     
     return render_template("docs.html", routes=routes)
 
+def log_food_entry(meal_name, meal_time, total_carbs):
+    food_entry = {
+        'meal_name': meal_name,
+        'meal_time': meal_time,
+        'total_carbs': total_carbs
+    }
+    db.food_entries.insert_one(food_entry)
+    return food_entry
 
-@app.route('/api/json')
-def json_test():
-    data = {'message': 'test', 'status': 200}
-    return jsonify(data)
+def log_exercise_entry(exercise_name, exercise_time, time_spent, intensity_level):
+    exercise_entry = {
+        'exercise_name': exercise_name,
+        'exercise_time': exercise_time,
+        'time_spent': time_spent,
+        'intensity_level': intensity_level
+    }
+    db.exercise_entries.insert_one(exercise_entry)
+    return exercise_entry
+
+@app.route('/api/food_entry', methods=['POST'])
+def food_entry():
+    data = request.json
+    meal_name = data['meal_name']
+    meal_time = data['meal_time']
+    total_carbs = data['total_carbs']
+    
+    entry = log_food_entry(meal_name, meal_time, total_carbs)
+    
+    return jsonify({'status': 'success', 'entry': entry})
+
+@app.route('/api/exercise_entry', methods=['POST'])
+def exercise_entry():
+    data = request.json
+    exercise_name = data['exercise_name']
+    exercise_time = data['exercise_time']
+    time_spent = data['time_spent']
+    intensity_level = data['intensity_level']
+    
+    entry = log_exercise_entry(exercise_name, exercise_time, time_spent, intensity_level)
+    
+    return jsonify({'status': 'success', 'entry': entry})
