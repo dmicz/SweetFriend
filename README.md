@@ -13,5 +13,5 @@ python -m venv .venv
 .venv\Scripts\activate.bat # windows
 export FLASK_APP=api/app.py # linux
 set FLASK_APP=api/app.py # windows
-flask run
+flask run --debug
 ```

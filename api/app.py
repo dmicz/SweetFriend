@@ -1,11 +1,23 @@
-from flask import Flask
+from flask import Flask, jsonify
+import json
 
 app = Flask(__name__)
 
-@app.route('/')
+@app.route('/api/')
 def home():
-    return 'Hello, World!'
+    routes = []
+    for rule in app.url_map.iter_rules():
+        methods = ', '.join(rule.methods)
+        routes.append({
+            'endpoint': rule.endpoint,
+            'methods': methods,
+            'url': str(rule)
+        })
+    return jsonify(routes)
 
-@app.route('/about')
-def about():
-    return 'About'
+
+@app.route('/api/json')
+def json_test():
+    data = {'message': 'test', 'status': 200}
+    return jsonify(data)
+
