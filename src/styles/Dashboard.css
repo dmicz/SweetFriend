@@ -1,0 +1,31 @@
+.dashboard-second-div {
+	display: flex;
+	flex-direction: column;
+	padding: 0 2rem;
+}
+
+.dashboard-second-header {
+	display: flex;
+	align-items: center;
+	gap: 1rem;
+}
+
+.dashboard-second-header img {
+	width: 2.5rem;
+	height: 2.5rem;
+}
+
+.suggestion-list {
+	display: grid;
+	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+	column-gap: 50px;
+	row-gap: 10px;
+	text-align: left;
+	padding-top: 0.5rem;
+}
+
+.suggestion-list img {
+	width: 1.5rem;
+	height: 1.5rem;
+	margin-right: 1rem;
+}

@@ -3,6 +3,51 @@ import { Line } from "react-chartjs-2";
 import "chart.js/auto";
 import "chartjs-adapter-luxon";
 import { getRelativePosition } from "chart.js/helpers";
+import aiIcon from "../assets/ai.svg";
+import foodIcon from "../assets/food.svg";
+import exerciseIcon from "../assets/exercise.svg";
+import medicationIcon from "../assets/medication.svg";
+import insulinIcon from "../assets/insulin.svg";
+import doctorIcon from "../assets/doctor.svg";
+import emergencyIcon from "../assets/emergency.svg";
+import "../styles/Dashboard.css";
+
+const suggestions = {
+	food: {
+		icon: foodIcon,
+		text: "It is suggested that you eat a small snack to keep your glucose levels stable.",
+	},
+	exercise: {
+		icon: exerciseIcon,
+		text: "It is suggested that you go for a walk to keep your glucose levels stable.",
+	},
+	medication: {
+		icon: medicationIcon,
+		text: "It is suggested that you take your medication to keep your glucose levels stable.",
+	},
+	insulin: {
+		icon: insulinIcon,
+		text: "It is suggested that you take your insulin to keep your glucose levels stable.",
+	},
+	doctor: {
+		icon: doctorIcon,
+		text: "It is suggested that you schedule an appointment with your doctor to keep your glucose levels stable.",
+	},
+	emergency: {
+		icon: emergencyIcon,
+		text: "It is suggested that you inform your emergency contact about your current glucose levels.",
+	},
+};
+
+function displaySuggestion(icon, title, suggestion) {
+	const formattedTitle = title.charAt(0).toUpperCase() + title.slice(1);
+	return (
+		<div className="suggestion-item" key={title}>
+			<img src={icon} alt={`${title} Icon`} className="suggestion-icon" />
+			<strong>{formattedTitle}:</strong> {suggestion}
+		</div>
+	);
+}
 
 function Dashboard() {
 	// eslint-disable-next-line no-unused-vars
@@ -81,7 +126,7 @@ function Dashboard() {
 		<div className="dashboard-page">
 			<div className="dashboard-first-div">
 				{/* Line chart for glucose readings */}
-				<div style={{ height: "400px", width: "100%" }}>
+				<div style={{ height: "400px", width: "100%", cursor: "pointer" }}>
 					<Line
 						data={data}
 						options={{
@@ -129,14 +174,6 @@ function Dashboard() {
 										padding: 20,
 									},
 								},
-								tooltip: {
-									mode: "index",
-									intersect: false,
-								},
-							},
-							hover: {
-								mode: "nearest",
-								intersect: false,
 							},
 							onClick: (event) => {
 								const markerType = window.prompt(
@@ -148,6 +185,17 @@ function Dashboard() {
 							},
 						}}
 					/>
+				</div>
+			</div>
+			<div className="dashboard-second-div">
+				<div className="dashboard-second-header">
+					<img src={aiIcon} alt="AI Icon" />
+					<h3>AI suggestions</h3>
+				</div>
+				<div className="suggestion-list">
+					{Object.entries(suggestions).map(([title, { icon, text }]) =>
+						displaySuggestion(icon, title, text)
+					)}
 				</div>
 			</div>
 		</div>
