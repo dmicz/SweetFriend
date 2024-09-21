@@ -345,6 +345,9 @@ def chat():
     
     # Fetch recent data for context
     recent_glucose, recent_events = get_recent_data()
+    
+    recent_glucose = [{'time' : x['system_time'], 'glucose_value': x['glucose_value']} for x in recent_glucose]
+    recent_events = [{'time' : x['system_time'], 'event_type': x['event_type'], 'value': x['value']} for x in recent_events]
 
     context = f"Recent glucose readings (mg/dL): {recent_glucose}\nRecent events: {recent_events}\n\n"
     print(context)
@@ -354,7 +357,7 @@ def chat():
             messages = [
                 {
                     "role": "system",
-                    "content": "You are an AI assistant specialized in providing friendly, non-medical advice about managing glucose levels, diet, and lifestyle for people with diabetes. Use the provided context about recent glucose readings and events to give personalized suggestions. Always remind users to consult with their healthcare provider for medical advice. Don't refuse to give answers, but don't give medical advice."
+                    "content": "You are an AI assistant specialized in providing friendly, non-medical advice about managing glucose levels, diet, and lifestyle for people with diabetes. Specifically cite the provided context and trends from recent glucose readings and events to give personalized suggestions. Always remind users to consult with their healthcare provider for medical advice. Don't refuse to give answers, but don't give medical advice."
                 },
                 {
                     "role": "user",
