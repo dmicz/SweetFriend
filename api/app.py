@@ -10,7 +10,8 @@ app.config.from_file('config.json', load=json.load)
 CLIENT_ID = app.config['DEXCOM_CLIENT']
 CLIENT_SECRET = app.config['DEXCOM_CLIENT_SECRET']
 REDIRECT_URI = 'http://localhost:5000/callback'
-DEXCOM_API_URL = 'https://api.dexcom.com/v3'
+DEXCOM_API_URL = 'https://sandbox-api.dexcom.com/v3'
+DEXCOM_API_URLv2 = 'https://sandbox-api.dexcom.com/v2'
 
 # ==========================
 # Dexcom API: OAuth2 and Data Fetching
@@ -18,13 +19,13 @@ DEXCOM_API_URL = 'https://api.dexcom.com/v3'
 
 @app.route('/login')
 def login():
-    auth_url = f"{DEXCOM_API_URL}/oauth2/login?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope=offline_access"
+    auth_url = f"{DEXCOM_API_URLv2}/oauth2/login?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope=offline_access"
     return redirect(auth_url)
 
 @app.route('/callback')
 def callback():
     code = request.args.get('code')
-    token_url = f'{DEXCOM_API_URL}/oauth2/token'
+    token_url = f'{DEXCOM_API_URLv2}/oauth2/token'
     data = {
         'client_id': CLIENT_ID,
         'client_secret': CLIENT_SECRET,
@@ -46,7 +47,7 @@ def callback():
 
 
 def get_db_connection():
-    conn = sqlite3.connect('dexcom_data.db')
+    conn = sqlite3.connect('glucose_data.db')
     return conn
 
 # ==========================
@@ -64,7 +65,7 @@ def fetch_and_store_glucose(access_token):
     glucose_data = response.json()
 
     conn = get_db_connection()
-    for reading in glucose_data['egvs']:
+    for reading in glucose_data['records']:
         conn.execute('''
             INSERT INTO glucose_readings (system_time, display_time, glucose_value, trend, trend_rate)
             VALUES (?, ?, ?, ?, ?)
@@ -83,11 +84,12 @@ def fetch_and_store_events(access_token):
     event_data = response.json()
 
     conn = get_db_connection()
-    for event in event_data['events']:
+    for event in event_data['records']:
+        print(event)
         conn.execute('''
             INSERT INTO dexcom_events (record_id, system_time, display_time, event_type, event_sub_type, value, unit, event_status)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (event['recordId'], event['systemTime'], event['displayTime'], event['eventType'], event['eventSubType'], event['value'], event['unit'], event['eventStatus']))
+        ''', (event['recordId'], event['systemTime'], event['displayTime'], event['eventType'], event.get('eventSubType', ""), event['value'], event['unit'], event['eventStatus']))
     conn.commit()
     conn.close()
 
@@ -102,7 +104,7 @@ def fetch_and_store_alerts(access_token):
     alert_data = response.json()
 
     conn = get_db_connection()
-    for alert in alert_data['alerts']:
+    for alert in alert_data['records']:
         conn.execute('''
             INSERT INTO glucose_alerts (alert_id, system_time, display_time, alert_type, alert_value, unit, alert_status)
             VALUES (?, ?, ?, ?, ?, ?, ?)
@@ -121,11 +123,11 @@ def fetch_and_store_calibrations(access_token):
     calibration_data = response.json()
 
     conn = get_db_connection()
-    for calibration in calibration_data['calibrations']:
+    for calibration in calibration_data['records']:
         conn.execute('''
             INSERT INTO calibrations (system_time, display_time, glucose_value, unit, calibration_status)
             VALUES (?, ?, ?, ?, ?)
-        ''', (calibration['systemTime'], calibration['displayTime'], calibration['value'], calibration['unit'], calibration['calibrationStatus']))
+        ''', (calibration['systemTime'], calibration['displayTime'], calibration['value'], calibration['unit'], ""))
     conn.commit()
     conn.close()
 
