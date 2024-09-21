@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request, render_template, redirect
+from flask_cors import CORS
 from twilio.rest import Client
 import requests
 import base64
@@ -8,8 +9,10 @@ import os
 from pymongo.mongo_client import MongoClient 
 from bson import ObjectId
 from datetime import datetime
+from cerebras.cloud.sdk import Cerebras
 
 app = Flask(__name__)
+CORS(app)
 if os.environ.get('VERCEL', None) != "True":
     app.config.from_file('config.json', load=json.load) 
 else:
@@ -19,6 +22,9 @@ else:
     app.config['DEXCOM_CLIENT'] = os.environ['DEXCOM_CLIENT']
     app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'localhost:5000')
     app.config['MONGO_PASSWORD'] = os.environ.get('MONGO_PASSWORD')
+    app.config['CEREBRAS_KEY'] = os.environ.get('CEREBRAS_KEY')
+
+app.config['DEXCOM_ACCESS_TOKEN'] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ZDdlMjI1Yy0xZDQyLTQzOTMtYWQ2Yy0zOWVhOGQ0ZjljNTUiLCJhdWQiOiJodHRwczovL3NhbmRib3gtYXBpLmRleGNvbS5jb20iLCJzY29wZSI6WyJlZ3YiLCJjYWxpYnJhdGlvbiIsImRldmljZSIsImV2ZW50Iiwic3RhdGlzdGljcyIsIm9mZmxpbmVfYWNjZXNzIl0sImlzcyI6Imh0dHBzOi8vc2FuZGJveC1hcGkuZGV4Y29tLmNvbSIsImV4cCI6MTcyNjk2MzU1MywiaWF0IjoxNzI2OTU2MzUzLCJjbGllbnRfaWQiOiI2SkxYS0N2VEtMaG9mY3B0bnBKM21uaDZDaFpTb3ZwMyJ9.jDIWgiKobc-fIchS0rNw_flqwnIuZ9XMhbya8mP5QXcfOmzIFES61GBVNr2BAh0CwydJpmkUyLhVLEeMe3oHlBm-5qoYyrQo6L_aKBX-fwtLI_AcaZA0T0_a8Cph3FLK3zZGVpSpr7kPnTXOQNMHosCOKT8CB82a0CoGL6PyxcFIpPUSaeCq5hNzq8Lbp5fBQzEkR0BQzPj2eU5TEmJeT0xJ4Z6-INWtk8fFK4M75JKnnLUZ8WeUn4LUjnk6A4zV5YHrli64eaHHMqh9RZn0k0WgrY4rH-vK-d3gV39HtSCyLK-Xf_HOmaglkIq-o5hcRWiU5PkbiTiy38mSv1p2nQ"
 
 # Set up Mongo URI
 app.config['MONGO_URI'] = f"mongodb+srv://dennismiczek:{app.config['MONGO_PASSWORD']}@sweetfriendcluster.yzcni.mongodb.net/?retryWrites=true&w=majority&appName=SweetFriendCluster"
@@ -29,8 +35,9 @@ HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' and app.con
 
 # Mongo client 
 client = MongoClient(app.config['MONGO_URI'])
+cerebas_client = Cerebras( api_key=app.config["CEREBRAS_KEY"])
 
-# Send a ping to confirm a su ccessful connection
+# Send a ping to confirm a successful connection
 try: 
     client.admin.command('ping')
     print("Pinged your deployment. You successfully connected to MongoDB!")
@@ -52,11 +59,9 @@ def login():
 
 @app.route('/twilio_send')
 def twilio_send():
-    twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
-    
     message = twilio_client.messages.create(
         from_='+18449053950',
-        body='Hello from Twilio (Flask)',
+        body='SweetFriend: Your glucose level is low and falling. Have a snack with around 15-20g of carbs.',
         to='+16467976340'
     )
     
@@ -77,21 +82,26 @@ def callback():
     tokens = response.json()
     access_token = tokens['access_token']
     app.config['DEXCOM_ACCESS_TOKEN'] = access_token
-    
-    # Store glucose readings, events, alerts, and calibrations
-    def fetch_all_dexcom_data(access_token):
-        fetch_and_store_glucose(access_token)
-        fetch_and_store_events(access_token)
-        fetch_and_store_alerts(access_token)
-        fetch_and_store_calibrations(access_token)
 
-    fetch_all_dexcom_data(access_token)
+    fetch_and_store_glucose(access_token)
+    fetch_and_store_events(access_token)
+    fetch_and_store_alerts(access_token)
+    fetch_and_store_calibrations(access_token)
 
     return jsonify({'message': 'Data fetched and stored successfully'})
+
+
 
 def get_db_connection():
     conn = sqlite3.connect('glucose_data.db')
     return conn
+
+# Store glucose readings, events, alerts, and calibrations
+    def fetch_all_dexcom_data(access_token, db):
+        fetch_and_store_glucose(access_token, db)
+        fetch_and_store_events(access_token, db)
+        fetch_and_store_alerts(access_token, db)
+        fetch_and_store_calibrations(access_token, db)
 
 # ==========================
 # Fetch Data from Dexcom and Store in MongoDB
@@ -190,9 +200,13 @@ def get_glucose():
     response = requests.get(glucose_url, headers=headers, params=params)
     glucose_data = response.json()['records']
 
-    glucose_data = [{'value': record['value'], 'displayTime': record['displayTime']} for record in glucose_data]
-
+    glucose_data = [{'value': record['value'], 'systemTime': record['systemTime']} for record in glucose_data]
+    
     return jsonify(glucose_data)
+
+# ==========================
+# Existing Routes for Image Upload
+# ==========================
 
 @app.route('/')
 def upload_form():
@@ -208,6 +222,7 @@ def analyze_image():
         return jsonify({"error": "No selected file"}), 400
 
     base64_image = base64.b64encode(image.read()).decode('utf-8')
+
 
     messages = []
     messages.append(
@@ -306,6 +321,41 @@ def analyze_image():
             return jsonify({"message": messages, "error": str(e)}), 500
     except requests.exceptions.RequestException as e:
         return jsonify({"message": messages, "error": str(e)}), 500
+
+
+## Suggestion AI 
+    
+async def get_ai_advice(glucose_level, recent_events):
+    try:
+        chat_completion = await cerebas_client.chat.completions.create(
+            model="llama3.1-8b",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an AI assistant providing friendly, non-medical advice for managing blood glucose levels. Suggest some general lifestyle tips based on glucose levels and recent events."
+            },
+            {
+                "role": "user",
+                "content": f"Current glucose level: {glucose_level}mg/dL. Recent events:{json.dumps(recent_events)}. What general advice can you give?"
+            }
+            
+        ],)
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        print(f"Error calling Cerebras API: {e}")
+    return "Sorry, I couuldn't generate advice at this time."
+
+@app.route('/api/get_advice', methods = ['POST'])
+async def get_advice():
+    data = request.json
+    glucose_level = data.get('glucose_level')
+    recent_events = data.get('recent_events', [])
+
+    if not glucose_level:
+        return jsonify({"error": "Glucose level is required"}), 400
+    
+    advice = await get_ai_advice(glucose_level, recent_events)
+    return jsonify({"advice": advice})
 
 
 @app.route('/api/')

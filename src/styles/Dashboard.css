@@ -1,7 +1,13 @@
 .dashboard-second-div {
-	display: flex;
-	flex-direction: column;
+	display: grid;
+	grid-template-columns: 1.5fr 1fr;
 	padding: 0 2rem;
+	gap: 4rem;
+	justify-content: space-between;
+}
+
+.recent-logs {
+	text-align: left;
 }
 
 .dashboard-second-header {
@@ -15,17 +21,6 @@
 	height: 2.5rem;
 }
 
-.suggestion-list {
-	display: grid;
-	grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-	column-gap: 50px;
-	row-gap: 10px;
+.ai-suggestions {
 	text-align: left;
-	padding-top: 0.5rem;
-}
-
-.suggestion-list img {
-	width: 1.5rem;
-	height: 1.5rem;
-	margin-right: 1rem;
 }

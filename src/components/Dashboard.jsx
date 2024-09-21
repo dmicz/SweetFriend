@@ -1,69 +1,47 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
 import "chartjs-adapter-luxon";
 import { getRelativePosition } from "chart.js/helpers";
 import aiIcon from "../assets/ai.svg";
-import foodIcon from "../assets/food.svg";
-import exerciseIcon from "../assets/exercise.svg";
-import medicationIcon from "../assets/medication.svg";
-import insulinIcon from "../assets/insulin.svg";
-import doctorIcon from "../assets/doctor.svg";
-import emergencyIcon from "../assets/emergency.svg";
+import recentIcon from "../assets/recent.svg";
 import "../styles/Dashboard.css";
-
-const suggestions = {
-	food: {
-		icon: foodIcon,
-		text: "It is suggested that you eat a small snack to keep your glucose levels stable.",
-	},
-	exercise: {
-		icon: exerciseIcon,
-		text: "It is suggested that you go for a walk to keep your glucose levels stable.",
-	},
-	medication: {
-		icon: medicationIcon,
-		text: "It is suggested that you take your medication to keep your glucose levels stable.",
-	},
-	insulin: {
-		icon: insulinIcon,
-		text: "It is suggested that you take your insulin to keep your glucose levels stable.",
-	},
-	doctor: {
-		icon: doctorIcon,
-		text: "It is suggested that you schedule an appointment with your doctor to keep your glucose levels stable.",
-	},
-	emergency: {
-		icon: emergencyIcon,
-		text: "It is suggested that you inform your emergency contact about your current glucose levels.",
-	},
-};
-
-function displaySuggestion(icon, title, suggestion) {
-	const formattedTitle = title.charAt(0).toUpperCase() + title.slice(1);
-	return (
-		<div className="suggestion-item" key={title}>
-			<img src={icon} alt={`${title} Icon`} className="suggestion-icon" />
-			<strong>{formattedTitle}:</strong> {suggestion}
-		</div>
-	);
-}
 
 function Dashboard() {
 	// eslint-disable-next-line no-unused-vars
-	const [glucoseReadings, setGlucoseReadings] = useState([
-		{ time: "00:00", value: 100 },
-		{ time: "04:00", value: 120 },
-		{ time: "08:00", value: 140 },
-		{ time: "12:00", value: 110 },
-		{ time: "16:00", value: 150 },
-		{ time: "20:00", value: 130 },
-	]);
+	const [glucoseReadings, setGlucoseReadings] = useState([]);
 
 	const [markers, setMarkers] = useState({
 		food: [],
 		exercise: [],
 	});
+
+	const fetchGlucoseReadings = async () => {
+		try {
+			const response = await fetch("http://localhost:5000/api/get_glucose");
+			const data = await response.json();
+
+			// Map the API response to the expected format
+			const formattedData = data.map((reading) => ({
+				time: DateTime.fromISO(reading.systemTime, { zone: "utc" }) // Set timezone to UTC
+					.toFormat("HH:mm"),
+
+				value: reading.value,
+			}));
+
+			setGlucoseReadings(formattedData);
+		} catch (error) {
+			console.error("Error fetching glucose readings:", error);
+		}
+	};
+
+	useEffect(() => {
+		fetchGlucoseReadings();
+	}, []);
+
+	useEffect(() => {
+		console.log("Updated glucoseReadings:", glucoseReadings);
+	}, [glucoseReadings]);
 
 	// Line chart data
 	const data = {
@@ -160,8 +138,8 @@ function Dashboard() {
 										text: "Glucose Level (mg/dL)",
 									},
 									beginAtZero: false,
-									min: 80,
-									max: 200,
+									min: Math.min(glucoseReadings.values) * 0.95,
+									max: Math.max(glucoseReadings.values) * 1.05,
 								},
 							},
 							plugins: {
@@ -188,14 +166,27 @@ function Dashboard() {
 				</div>
 			</div>
 			<div className="dashboard-second-div">
-				<div className="dashboard-second-header">
-					<img src={aiIcon} alt="AI Icon" />
-					<h3>AI suggestions</h3>
+				<div className="ai-suggestions">
+					<div className="dashboard-second-header">
+						<img src={aiIcon} alt="AI Icon" />
+						<h3>AI suggestions</h3>
+					</div>
+					<p>
+						Random AI suggestions will be displayed here. For example, &quot;You
+						should drink more water&quot; or &quot;You should go for a
+						walk.&quot;
+					</p>
 				</div>
-				<div className="suggestion-list">
-					{Object.entries(suggestions).map(([title, { icon, text }]) =>
-						displaySuggestion(icon, title, text)
-					)}
+				<div className="recent-logs">
+					<div className="dashboard-second-header">
+						<img src={recentIcon} alt="Recent Icon" />
+						<h3>Recent Logs</h3>
+					</div>
+					<p>
+						Recent logs will be displayed here. For example, &quot;You ate a
+						burger at 12:30 PM&quot; or &quot;You exercised for 30 minutes at 3
+						PM.&quot;
+					</p>
 				</div>
 			</div>
 		</div>
