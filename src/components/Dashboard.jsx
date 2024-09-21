@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Line } from "react-chartjs-2";
-// eslint-disable-next-line no-unused-vars
-import { Chart as ChartJS } from "chart.js/auto"; // Required for Chart.js to work
+import "chart.js/auto";
+import "chartjs-adapter-luxon";
+import { getRelativePosition } from "chart.js/helpers";
 
 function Dashboard() {
 	// eslint-disable-next-line no-unused-vars
@@ -27,8 +28,6 @@ function Dashboard() {
 				label: "Glucose Readings (mg/dL)",
 				data: glucoseReadings.map((reading) => reading.value),
 				borderColor: "rgba(75, 192, 192, 1)",
-				backgroundColor: "rgba(75, 192, 192, 0.2)",
-				fill: true,
 			},
 			// Food markers
 			{
@@ -55,26 +54,15 @@ function Dashboard() {
 	const handleChartClick = (event, type) => {
 		const chart = event.chart;
 
-		// Use event.nativeEvent to get the x and y pixel position of the click
-		const xPixel = event.native.x;
-		const yPixel = event.native.y;
+		// Get the exact relative position of the click on the canvas
+		const canvasPosition = getRelativePosition(event, chart);
 
-		// Convert pixels to chart data (time)
-		const xValue = chart.scales.x.getValueForPixel(xPixel); // Time in hours
-		const yValue = chart.scales.y.getValueForPixel(yPixel); // Glucose value
-
-		// Log the click details for debugging
-		console.log("xPixel (click X):", xPixel);
-		console.log("yPixel (click Y):", yPixel);
-		console.log("xValue (time):", xValue);
-		console.log("yValue (glucose):", yValue);
-
-		// Get nearest time label by rounding xValue and offsetting the yValue
-		const nearestTime = chart.scales.x.ticks[Math.round(xValue)].label;
-		const adjustedYValue = yValue + 8;
+		// Use the relative position to get the exact data coordinates
+		const xValue = chart.scales.x.getValueForPixel(canvasPosition.x); // Time in hours
+		const yValue = chart.scales.y.getValueForPixel(canvasPosition.y); // Glucose value
 
 		// Add new marker based on the type (food or exercise)
-		const newMarker = { x: nearestTime, y: adjustedYValue };
+		const newMarker = { x: xValue, y: yValue };
 
 		setMarkers((prevMarkers) => {
 			if (type === "food") {
@@ -103,7 +91,34 @@ function Dashboard() {
 							layout: {
 								padding: 0,
 							},
-
+							scales: {
+								x: {
+									type: "time",
+									time: {
+										tooltipFormat: "HH:mm", // Display time in hours and minutes
+										unit: "hour",
+										stepSize: 1,
+										displayFormats: {
+											hour: "HH:mm", // Display x-axis in 24-hour format
+										},
+									},
+									title: {
+										display: true,
+										text: "Time (24-Hour Format)",
+									},
+									min: "2024-09-21T00:00:00",
+									max: "2024-09-21T23:59:59",
+								},
+								y: {
+									title: {
+										display: true,
+										text: "Glucose Level (mg/dL)",
+									},
+									beginAtZero: false,
+									min: 80,
+									max: 200,
+								},
+							},
 							plugins: {
 								legend: {
 									display: true,
@@ -114,6 +129,14 @@ function Dashboard() {
 										padding: 20,
 									},
 								},
+								tooltip: {
+									mode: "index",
+									intersect: false,
+								},
+							},
+							hover: {
+								mode: "nearest",
+								intersect: false,
 							},
 							onClick: (event) => {
 								const markerType = window.prompt(
