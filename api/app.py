@@ -24,6 +24,8 @@ else:
     app.config['MONGO_PASSWORD'] = os.environ.get('MONGO_PASSWORD')
     app.config['CEREBRAS_KEY'] = os.environ.get('CEREBRAS_KEY')
 
+app.config['DEXCOM_ACCESS_TOKEN'] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ZDdlMjI1Yy0xZDQyLTQzOTMtYWQ2Yy0zOWVhOGQ0ZjljNTUiLCJhdWQiOiJodHRwczovL3NhbmRib3gtYXBpLmRleGNvbS5jb20iLCJzY29wZSI6WyJlZ3YiLCJjYWxpYnJhdGlvbiIsImRldmljZSIsImV2ZW50Iiwic3RhdGlzdGljcyIsIm9mZmxpbmVfYWNjZXNzIl0sImlzcyI6Imh0dHBzOi8vc2FuZGJveC1hcGkuZGV4Y29tLmNvbSIsImV4cCI6MTcyNjk2MzU1MywiaWF0IjoxNzI2OTU2MzUzLCJjbGllbnRfaWQiOiI2SkxYS0N2VEtMaG9mY3B0bnBKM21uaDZDaFpTb3ZwMyJ9.jDIWgiKobc-fIchS0rNw_flqwnIuZ9XMhbya8mP5QXcfOmzIFES61GBVNr2BAh0CwydJpmkUyLhVLEeMe3oHlBm-5qoYyrQo6L_aKBX-fwtLI_AcaZA0T0_a8Cph3FLK3zZGVpSpr7kPnTXOQNMHosCOKT8CB82a0CoGL6PyxcFIpPUSaeCq5hNzq8Lbp5fBQzEkR0BQzPj2eU5TEmJeT0xJ4Z6-INWtk8fFK4M75JKnnLUZ8WeUn4LUjnk6A4zV5YHrli64eaHHMqh9RZn0k0WgrY4rH-vK-d3gV39HtSCyLK-Xf_HOmaglkIq-o5hcRWiU5PkbiTiy38mSv1p2nQ"
+
 # Set up Mongo URI
 app.config['MONGO_URI'] = f"mongodb+srv://dennismiczek:{app.config['MONGO_PASSWORD']}@sweetfriendcluster.yzcni.mongodb.net/?retryWrites=true&w=majority&appName=SweetFriendCluster"
 twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
@@ -81,7 +83,6 @@ def callback():
     access_token = tokens['access_token']
     app.config['DEXCOM_ACCESS_TOKEN'] = access_token
 
-    
     fetch_and_store_glucose(access_token)
     fetch_and_store_events(access_token)
     fetch_and_store_alerts(access_token)
