@@ -2,6 +2,7 @@ from flask import Flask, jsonify, request, render_template, redirect
 import requests
 import base64
 import json
+import sqlite3
 
 app = Flask(__name__)
 app.config.from_file('config.json', load=json.load)
