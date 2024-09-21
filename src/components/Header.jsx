@@ -18,7 +18,7 @@ function Header() {
 		<div className="header">
 			<div className="title" onClick={handleTitleClick}>
 				<img src={icon} alt="Sweet Friend's Icon" />
-				<h1>SWeet Friend</h1>
+				<h1>Sweet Friend</h1>
 			</div>
 			<div className="links">
 				<a
