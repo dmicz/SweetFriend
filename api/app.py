@@ -4,6 +4,7 @@ import base64
 import json
 import sqlite3
 import os
+import threading
 
 app = Flask(__name__)
 if os.environ.get('VERCEL', None) != "True":
@@ -16,7 +17,7 @@ else:
 
 CLIENT_ID = app.config['DEXCOM_CLIENT']
 CLIENT_SECRET = app.config['DEXCOM_CLIENT_SECRET']
-REDIRECT_URI = 'http://localhost:5000/callback'
+REDIRECT_URI = 'http://localhost:5000/callback, http://localhost:4000/callback' 
 DEXCOM_API_URL = 'https://sandbox-api.dexcom.com/v3'
 DEXCOM_API_URLv2 = 'https://sandbox-api.dexcom.com/v2'
 
@@ -56,6 +57,22 @@ def callback():
 def get_db_connection():
     conn = sqlite3.connect('glucose_data.db')
     return conn
+
+def run_app(port):
+    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=False)
+
+if __name__ == '__main__':
+    # Create threads for each port
+    thread_5000 = threading.Thread(target=run_app, args=(5000,))
+    thread_4000 = threading.Thread(target=run_app, args=(4000,))
+
+    # Start both threads
+    thread_5000.start()
+    thread_4000.start()
+
+    # Wait for both threads to complete
+    thread_5000.join()
+    thread_4000.join()
 
 # ==========================
 # Fetch Data from Dexcom and Store in SQLite
