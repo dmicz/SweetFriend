@@ -1,24 +1,45 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Line } from "react-chartjs-2";
 import "chart.js/auto";
 import "chartjs-adapter-luxon";
 import { getRelativePosition } from "chart.js/helpers";
+import { DateTime } from 'luxon';
 
 function Dashboard() {
 	// eslint-disable-next-line no-unused-vars
-	const [glucoseReadings, setGlucoseReadings] = useState([
-		{ time: "00:00", value: 100 },
-		{ time: "04:00", value: 120 },
-		{ time: "08:00", value: 140 },
-		{ time: "12:00", value: 110 },
-		{ time: "16:00", value: 150 },
-		{ time: "20:00", value: 130 },
-	]);
+	const [glucoseReadings, setGlucoseReadings] = useState([]);
 
 	const [markers, setMarkers] = useState({
 		food: [],
 		exercise: [],
 	});
+
+	const fetchGlucoseReadings = async () => {
+		try {
+			const response = await fetch('http://localhost:5000/api/get_glucose');
+			const data = await response.json();
+			
+			// Map the API response to the expected format
+			const formattedData = data.map(reading => ({
+				time: DateTime.fromISO(reading.systemTime, { zone: 'utc' }) // Set timezone to UTC
+				.toFormat('HH:mm'),
+				
+				value: reading.value,
+			}));
+
+			setGlucoseReadings(formattedData);
+		} catch (error) {
+			console.error("Error fetching glucose readings:", error);
+		}
+	};
+
+	useEffect(() => {
+		fetchGlucoseReadings();
+	}, []);
+
+	useEffect(() => {
+		console.log("Updated glucoseReadings:", glucoseReadings);
+	}, [glucoseReadings]);
 
 	// Line chart data
 	const data = {
@@ -115,8 +136,8 @@ function Dashboard() {
 										text: "Glucose Level (mg/dL)",
 									},
 									beginAtZero: false,
-									min: 80,
-									max: 200,
+									min: Math.min(glucoseReadings.values) * 0.95,
+									max: Math.max(glucoseReadings.values) * 1.05,
 								},
 							},
 							plugins: {

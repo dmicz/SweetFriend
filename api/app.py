@@ -1,4 +1,5 @@
 from flask import Flask, jsonify, request, render_template, redirect
+from flask_cors import CORS
 from twilio.rest import Client
 import requests
 import base64
@@ -11,6 +12,7 @@ from datetime import datetime
 from cerebras.cloud.sdk import Cerebras
 
 app = Flask(__name__)
+CORS(app)
 if os.environ.get('VERCEL', None) != "True":
     app.config.from_file('config.json', load=json.load) 
 else:
@@ -18,19 +20,20 @@ else:
     app.config['TWILIO_ACCOUNT_SID'] = os.environ['TWILIO_ACCOUNT_SID']
     app.config['DEXCOM_CLIENT_SECRET'] = os.environ['DEXCOM_CLIENT_SECRET']
     app.config['DEXCOM_CLIENT'] = os.environ['DEXCOM_CLIENT']
-    app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'http://localhost:5000')
+    app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'localhost:5000')
     app.config['MONGO_PASSWORD'] = os.environ.get('MONGO_PASSWORD')
+    app.config['CEREBRAS_KEY'] = os.environ.get('CEREBRAS_KEY')
 
 # Set up Mongo URI
 app.config['MONGO_URI'] = f"mongodb+srv://dennismiczek:{app.config['MONGO_PASSWORD']}@sweetfriendcluster.yzcni.mongodb.net/?retryWrites=true&w=majority&appName=SweetFriendCluster"
 twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
 
 DEXCOM_API_URL = 'https://sandbox-api.dexcom.com'
-HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' else ''}://"
+HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' and app.config['SERVER_NAME'][:3] != '127' else ''}://"
 
 # Mongo client 
 client = MongoClient(app.config['MONGO_URI'])
-client = Cerebras( api_key=os.environ.get("CEREBRAS_KEY"))
+cerebas_client = Cerebras( api_key=app.config["CEREBRAS_KEY"])
 
 # Send a ping to confirm a successful connection
 try: 
@@ -76,8 +79,16 @@ def callback():
     response = requests.post(token_url, data=data)
     tokens = response.json()
     access_token = tokens['access_token']
+    app.config['DEXCOM_ACCESS_TOKEN'] = access_token
+
     
-    
+    fetch_and_store_glucose(access_token)
+    fetch_and_store_events(access_token)
+    fetch_and_store_alerts(access_token)
+    fetch_and_store_calibrations(access_token)
+
+    return jsonify({'message': 'Data fetched and stored successfully'})
+
 
 
 def get_db_connection():
@@ -188,7 +199,7 @@ def get_glucose():
     response = requests.get(glucose_url, headers=headers, params=params)
     glucose_data = response.json()['records']
 
-    glucose_data = [{'value': record['value'], 'displayTime': record['displayTime']} for record in glucose_data]
+    glucose_data = [{'value': record['value'], 'systemTime': record['systemTime']} for record in glucose_data]
     
     return jsonify(glucose_data)
 
@@ -242,7 +253,7 @@ def analyze_image():
         "model": "openai/gpt-4o-mini",
         "stream": False,
         "frequency_penalty": 0.2,
-        "max_tokens": 200
+        "max_tokens": 2000
     }
 
     try:
@@ -315,7 +326,7 @@ def analyze_image():
     
 async def get_ai_advice(glucose_level, recent_events):
     try:
-        chat_completion = await client.chat.completions.create(
+        chat_completion = await cerebas_client.chat.completions.create(
             model="llama3.1-8b",
         messages=[
             {
@@ -333,7 +344,7 @@ async def get_ai_advice(glucose_level, recent_events):
         print(f"Error calling Cerebras API: {e}")
     return "Sorry, I couuldn't generate advice at this time."
 
-@app.route('api/get_advice', methods = ['POST'])
+@app.route('/api/get_advice', methods = ['POST'])
 async def get_advice():
     data = request.json
     glucose_level = data.get('glucose_level')
