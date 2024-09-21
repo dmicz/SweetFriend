@@ -5,7 +5,6 @@ import base64
 import json
 import sqlite3
 import os
-import threading
 
 app = Flask(__name__)
 if os.environ.get('VERCEL', None) != "True":
@@ -15,12 +14,11 @@ else:
     app.config['TWILIO_ACCOUNT_SID'] = os.environ['TWILIO_ACCOUNT_SID']
     app.config['DEXCOM_CLIENT_SECRET'] = os.environ['DEXCOM_CLIENT_SECRET']
     app.config['DEXCOM_CLIENT'] = os.environ['DEXCOM_CLIENT']
+    app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'http://localhost:5000')
 
-CLIENT_ID = app.config['DEXCOM_CLIENT']
-CLIENT_SECRET = app.config['DEXCOM_CLIENT_SECRET']
-REDIRECT_URI = 'http://localhost:5000/callback, http://localhost:4000/callback' 
-DEXCOM_API_URL = 'https://sandbox-api.dexcom.com/v3'
-DEXCOM_API_URLv2 = 'https://sandbox-api.dexcom.com/v2'
+twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
+
+DEXCOM_API_URL = 'https://sandbox-api.dexcom.com'
 
 # ==========================
 # Dexcom API: OAuth2 and Data Fetching
@@ -28,19 +26,29 @@ DEXCOM_API_URLv2 = 'https://sandbox-api.dexcom.com/v2'
 
 @app.route('/login')
 def login():
-    auth_url = f"{DEXCOM_API_URL}/v2/oauth2/login?client_id={CLIENT_ID}&redirect_uri={REDIRECT_URI}&response_type=code&scope=offline_access"
+    auth_url = f"{DEXCOM_API_URL}/v2/oauth2/login?client_id={app.config['DEXCOM_CLIENT']}&redirect_uri={'http://' + app.config['SERVER_NAME'] + '/callback'}&response_type=code&scope=offline_access"
     return redirect(auth_url)
+
+@app.route('/twilio_send')
+def twilio_send():
+    message = twilio_client.messages.create(
+        from_='+18449053950',
+        body='Hello from Twilio (Flask)',
+        to='+16467976340'
+    )
+    
+    return jsonify({'status': 'message sent', 'message_sid': message.sid})
 
 @app.route('/callback')
 def callback():
     code = request.args.get('code')
     token_url = f'{DEXCOM_API_URL}/v2/oauth2/token'
     data = {
-        'client_id': CLIENT_ID,
-        'client_secret': CLIENT_SECRET,
+        'client_id': app.config['DEXCOM_CLIENT'],
+        'client_secret': app.config['DEXCOM_CLIENT_SECRET'],
         'code': code,
         'grant_type': 'authorization_code',
-        'redirect_uri': REDIRECT_URI
+        'redirect_uri': 'http://' + app.config['SERVER_NAME'] + '/callback'
     }
     response = requests.post(token_url, data=data)
     tokens = response.json()
@@ -58,22 +66,6 @@ def callback():
 def get_db_connection():
     conn = sqlite3.connect('glucose_data.db')
     return conn
-
-def run_app(port):
-    app.run(host='0.0.0.0', port=port, debug=True, use_reloader=False)
-
-if __name__ == '__main__':
-    # Create threads for each port
-    thread_5000 = threading.Thread(target=run_app, args=(5000,))
-    thread_4000 = threading.Thread(target=run_app, args=(4000,))
-
-    # Start both threads
-    thread_5000.start()
-    thread_4000.start()
-
-    # Wait for both threads to complete
-    thread_5000.join()
-    thread_4000.join()
 
 # ==========================
 # Fetch Data from Dexcom and Store in SQLite
