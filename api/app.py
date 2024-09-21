@@ -3,9 +3,16 @@ import requests
 import base64
 import json
 import sqlite3
+import os
 
 app = Flask(__name__)
-app.config.from_file('config.json', load=json.load)
+if os.environ.get('VERCEL', None) != "True":
+    app.config.from_file('config.json', load=json.load)
+else:
+    app.config['TWILIO_AUTH_TOKEN'] = os.environ['TWILIO_AUTH_TOKEN']
+    app.config['TWILIO_ACCOUNT_SID'] = os.environ['TWILIO_ACCOUNT_SID']
+    app.config['DEXCOM_CLIENT_SECRET'] = os.environ['DEXCOM_CLIENT_SECRET']
+    app.config['DEXCOM_CLIENT'] = os.environ['DEXCOM_CLIENT']
 
 CLIENT_ID = app.config['DEXCOM_CLIENT']
 CLIENT_SECRET = app.config['DEXCOM_CLIENT_SECRET']
