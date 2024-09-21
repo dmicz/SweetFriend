@@ -56,7 +56,7 @@ def twilio_send():
     
     message = twilio_client.messages.create(
         from_='+18449053950',
-        body='Hello from Twilio (Flask)',
+        body='SweetFriend: Your glucose level is low and falling. Have a snack with around 15-20g of carbs.',
         to='+16467976340'
     )
     
