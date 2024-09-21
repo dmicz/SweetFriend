@@ -14,12 +14,10 @@ else:
     app.config['TWILIO_ACCOUNT_SID'] = os.environ['TWILIO_ACCOUNT_SID']
     app.config['DEXCOM_CLIENT_SECRET'] = os.environ['DEXCOM_CLIENT_SECRET']
     app.config['DEXCOM_CLIENT'] = os.environ['DEXCOM_CLIENT']
-    app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'http://localhost:5000')
-
-twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
+    app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'localhost:5000')
 
 DEXCOM_API_URL = 'https://sandbox-api.dexcom.com'
-HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' else ''}://"
+HTTP_PREFIX = f"http{'s' if (app.config['SERVER_NAME'][:5] != 'local' and app.config['SERVER_NAME'][:3] != '127') else ''}://"
 
 # ==========================
 # Dexcom API: OAuth2 and Data Fetching
@@ -32,6 +30,8 @@ def login():
 
 @app.route('/twilio_send')
 def twilio_send():
+    twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
+    
     message = twilio_client.messages.create(
         from_='+18449053950',
         body='Hello from Twilio (Flask)',
@@ -167,10 +167,6 @@ def get_glucose():
     cur.close()
     conn.close()
     return jsonify(results)
-
-# ==========================
-# Existing Routes for Image Upload
-# ==========================
 
 @app.route('/')
 def upload_form():
