@@ -8,6 +8,7 @@ import os
 from pymongo.mongo_client import MongoClient 
 from bson import ObjectId
 from datetime import datetime
+from cerebras.cloud.sdk import Cerebras
 
 app = Flask(__name__)
 if os.environ.get('VERCEL', None) != "True":
@@ -17,7 +18,7 @@ else:
     app.config['TWILIO_ACCOUNT_SID'] = os.environ['TWILIO_ACCOUNT_SID']
     app.config['DEXCOM_CLIENT_SECRET'] = os.environ['DEXCOM_CLIENT_SECRET']
     app.config['DEXCOM_CLIENT'] = os.environ['DEXCOM_CLIENT']
-    app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'localhost:5000')
+    app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'http://localhost:5000')
     app.config['MONGO_PASSWORD'] = os.environ.get('MONGO_PASSWORD')
 
 # Set up Mongo URI
@@ -25,12 +26,13 @@ app.config['MONGO_URI'] = f"mongodb+srv://dennismiczek:{app.config['MONGO_PASSWO
 twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
 
 DEXCOM_API_URL = 'https://sandbox-api.dexcom.com'
-HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' and app.config['SERVER_NAME'][:3] != '127' else ''}://"
+HTTP_PREFIX = f"http{'s' if app.config['SERVER_NAME'][:5] != 'local' else ''}://"
 
 # Mongo client 
 client = MongoClient(app.config['MONGO_URI'])
+client = Cerebras( api_key=os.environ.get("CEREBRAS_KEY"))
 
-# Send a ping to confirm a su ccessful connection
+# Send a ping to confirm a successful connection
 try: 
     client.admin.command('ping')
     print("Pinged your deployment. You successfully connected to MongoDB!")
@@ -48,13 +50,10 @@ db = client.dexcom_db
 @app.route('/login')
 def login():
     auth_url = f"{DEXCOM_API_URL}/v2/oauth2/login?client_id={app.config['DEXCOM_CLIENT']}&redirect_uri={HTTP_PREFIX + app.config['SERVER_NAME'] + '/callback'}&response_type=code&scope=offline_access"
-    print(auth_url)
     return redirect(auth_url)
 
 @app.route('/twilio_send')
 def twilio_send():
-    twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
-    
     message = twilio_client.messages.create(
         from_='+18449053950',
         body='Hello from Twilio (Flask)',
@@ -77,25 +76,23 @@ def callback():
     response = requests.post(token_url, data=data)
     tokens = response.json()
     access_token = tokens['access_token']
-    app.config['DEXCOM_ACCESS_TOKEN'] = access_token
     
-    # Store glucose readings, events, alerts, and calibrations
-    def fetch_all_dexcom_data(access_token):
-        fetch_and_store_glucose(access_token)
-        fetch_and_store_events(access_token)
-        fetch_and_store_alerts(access_token)
-        fetch_and_store_calibrations(access_token)
+    
 
-    fetch_all_dexcom_data(access_token)
-
-    return jsonify({'message': 'Data fetched and stored successfully'})
 
 def get_db_connection():
     conn = sqlite3.connect('glucose_data.db')
     return conn
 
+# Store glucose readings, events, alerts, and calibrations
+    def fetch_all_dexcom_data(access_token, db):
+        fetch_and_store_glucose(access_token, db)
+        fetch_and_store_events(access_token, db)
+        fetch_and_store_alerts(access_token, db)
+        fetch_and_store_calibrations(access_token, db)
+
 # ==========================
-# Fetch Data from Dexcom and Store in SQLite
+# Fetch Data from Dexcom and Store in MongoDB
 # ==========================
 
 def fetch_and_store_glucose(access_token):
@@ -182,16 +179,26 @@ def fetch_and_store_calibrations(access_token):
 
 @app.route('/api/get_glucose')
 def get_glucose():
-    headers = {'Authorization': f'Bearer {app.config['DEXCOM_ACCESS_TOKEN']}'}
-    glucose_url = f'{DEXCOM_API_URL}/v3/users/self/egvs'
-    params = {
-        'startDate': '2024-01-01T00:00:00',
-        'endDate': '2024-01-02T00:00:00'  # Adjust date range as needed
-    }
-    response = requests.get(glucose_url, headers=headers, params=params)
-    glucose_data = response.json()
+    conn = get_db_connection()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT * FROM glucose_readings
+    ''')
+    rows = cur.fetchall()
 
-    return jsonify(glucose_data)
+    column_names = [desc[0] for desc in cur.description]
+
+    results = []
+    for row in rows:
+        results.append(dict(zip(column_names, row)))
+
+    cur.close()
+    conn.close()
+    return jsonify(results)
+
+# ==========================
+# Existing Routes for Image Upload
+# ==========================
 
 @app.route('/')
 def upload_form():
@@ -208,13 +215,15 @@ def analyze_image():
 
     base64_image = base64.b64encode(image.read()).decode('utf-8')
 
-    messages = [
+    data = {
+        "temperature": 0.9,
+        "messages": [
             {
                 "role": "user",
                 "content": [
                     {
                         "type": "text",
-                        "text": "First, analyze the image and describe what food items are present. Then, break down the ingredients and estimate the carbs of each ingredient, then calculate the total carbs and give the name of the meal."
+                        "text": "What do you see?"
                     },
                     {
                         "type": "image_url",
@@ -224,15 +233,11 @@ def analyze_image():
                     }
                 ]
             }
-        ]
-
-    data = {
-        "temperature": 0.9,
-        "messages": messages,
+        ],
         "model": "openai/gpt-4o-mini",
         "stream": False,
         "frequency_penalty": 0.2,
-        "max_tokens": 2000
+        "max_tokens": 200
     }
 
     try:
@@ -241,51 +246,44 @@ def analyze_image():
                                  json=data,
                                  verify=False)
         response.raise_for_status()
-        messages.append(response.json()['choices'][0]['message'])
-        messages.append(
+        return jsonify(response.json())
+    except requests.exceptions.RequestException as e:
+        return jsonify({"error": str(e)}), 500
+
+
+## Suggestion AI 
+    
+async def get_ai_advice(glucose_level, recent_events):
+    try:
+        chat_completion = await client.chat.completions.create(
+            model="llama3.1-8b",
+        messages=[
+            {
+                "role": "system",
+                "content": "You are an AI assistant providing friendly, non-medical advice for managing blood glucose levels. Suggest some general lifestyle tips based on glucose levels and recent events."
+            },
             {
                 "role": "user",
-                "content": [
-                    {
-                        "type": "text",
-                        "text": "Using your estimates, fill the structured output JSON with the values. Only output valid JSON according to the schema. Only output for the meal total, one entry. Do not use code blocks or anything to surround json."
-                    },
-                    {
-                        "type": "image_url",
-                        "image_url": {
-                            "url": f"data:image/jpeg;base64,{base64_image}"
-                        }
-                    }
-                ]
-            })
-        data = {
-            "temperature": 0.9,
-            "messages": messages,
-            "model": "openai/gpt-4o-mini",
-            "stream": False,
-            "frequency_penalty": 0.2,
-            "response-format": {
-            "type": "json_object"
-            },
-            "guided_json": "{\n    \"meal_name\": \"<name of meal>\",\n    \"total_carbs\": \"<total carbs in grams>\"}",
-            "max_tokens": 200
-        }
-        try:
-            response = requests.post("https://proxy.tune.app/chat/completions", 
-                                    headers={"Authorization": f"{app.config['TUNE_AUTH']}", "Content-Type": "application/json", "X-Org-Id": f"{app.config['TUNE_ORG_ID']}"}, 
-                                    json=data,
-                                    verify=False)
-            response.raise_for_status()
-            response_content = response.json()['choices'][0]['message']['content']
-            try:
-                json_response = json.loads(response_content)
-                return jsonify(json_response)
-            except json.JSONDecodeError:
-                return jsonify({"message": messages, "error": "Failed to decode JSON from response"}), 500
-        except requests.exceptions.RequestException as e:
-            return jsonify({"message": messages, "error": str(e)}), 500
-    except requests.exceptions.RequestException as e:
-        return jsonify({"message": messages, "error": str(e)}), 500
+                "content": f"Current glucose level: {glucose_level}mg/dL. Recent events:{json.dumps(recent_events)}. What general advice can you give?"
+            }
+            
+        ],)
+        return chat_completion.choices[0].message.content
+    except Exception as e:
+        print(f"Error calling Cerebras API: {e}")
+    return "Sorry, I couuldn't generate advice at this time."
+
+@app.route('api/get_advice', methods = ['POST'])
+async def get_advice():
+    data = request.json
+    glucose_level = data.get('glucose_level')
+    recent_events = data.get('recent_events', [])
+
+    if not glucose_level:
+        return jsonify({"error": "Glucose level is required"}), 400
+    
+    advice = await get_ai_advice(glucose_level, recent_events)
+    return jsonify({"advice": advice})
 
 
 @app.route('/api/')
