@@ -75,6 +75,7 @@ def callback():
     response = requests.post(token_url, data=data)
     tokens = response.json()
     access_token = tokens['access_token']
+    app.config['DEXCOM_ACCESS_TOKEN'] = access_token
     
     # Store glucose readings, events, alerts, and calibrations
     def fetch_all_dexcom_data(access_token):
@@ -179,22 +180,16 @@ def fetch_and_store_calibrations(access_token):
 
 @app.route('/api/get_glucose')
 def get_glucose():
-    conn = get_db_connection()
-    cur = conn.cursor()
-    cur.execute('''
-        SELECT * FROM glucose_readings
-    ''')
-    rows = cur.fetchall()
+    headers = {'Authorization': f'Bearer {app.config['DEXCOM_ACCESS_TOKEN']}'}
+    glucose_url = f'{DEXCOM_API_URL}/v3/users/self/egvs'
+    params = {
+        'startDate': '2024-01-01T00:00:00',
+        'endDate': '2024-01-02T00:00:00'  # Adjust date range as needed
+    }
+    response = requests.get(glucose_url, headers=headers, params=params)
+    glucose_data = response.json()
 
-    column_names = [desc[0] for desc in cur.description]
-
-    results = []
-    for row in rows:
-        results.append(dict(zip(column_names, row)))
-
-    cur.close()
-    conn.close()
-    return jsonify(results)
+    return jsonify(glucose_data)
 
 # ==========================
 # Existing Routes for Image Upload
