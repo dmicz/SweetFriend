@@ -1,0 +1,56 @@
+.header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	padding: 0.35rem 1rem;
+}
+
+.title {
+	display: flex;
+	align-items: center;
+	gap: 0.5rem;
+}
+
+.title:hover {
+	cursor: pointer;
+}
+
+.title h1 {
+	margin: 0;
+	font-size: 2rem;
+	text-shadow: none;
+	transition: text-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
+}
+
+.title:hover h1 {
+	text-shadow: 0 0 0.5rem #646cff;
+	transform: translateY(-2px);
+}
+
+.title img {
+	width: 2.5rem;
+	height: 2.5rem;
+	transition: filter 0.3s ease, transform 0.3s ease;
+}
+
+.title:hover img {
+	filter: brightness(1.1);
+	transform: translateY(-2px);
+}
+
+.header .links {
+	display: flex;
+	gap: 1rem;
+}
+
+.header .links a {
+	text-decoration: none;
+}
+
+.header .links a:hover {
+	text-decoration: underline;
+}
+
+.header .links a.active {
+	font-weight: bold;
+}
