@@ -440,47 +440,74 @@ def home():
     
     return render_template("docs.html", routes=routes)
 
-def log_food_entry(meal_name, meal_time, total_carbs):
-    food_entry = {
-        'meal_name': meal_name,
-        'meal_time': meal_time,
+def log_entry(name, log_type, timestamp, details):
+    entry = {
+        'name': name,
+        'type': log_type,
+        'timestamp': timestamp,
+        'starred': False
+    }
+
+    entry['details'] = details
+
+    db.log_entries.insert_one(entry)
+    return entry
+
+def log_food_entry(name, timestamp, total_carbs):
+    food_details = {
         'total_carbs': total_carbs
     }
-    db.food_entries.insert_one(food_entry)
-    return food_entry
+    return log_entry(name, 'food', timestamp, food_details)
 
-def log_exercise_entry(exercise_name, exercise_time, time_spent, intensity_level):
-    exercise_entry = {
-        'exercise_name': exercise_name,
-        'exercise_time': exercise_time,
+def log_exercise_entry(name, timestamp, time_spent, intensity_level):
+    exercise_details = {
         'time_spent': time_spent,
         'intensity_level': intensity_level
     }
-    db.exercise_entries.insert_one(exercise_entry)
-    return exercise_entry
+    return log_entry(name, 'exercise', timestamp, exercise_details)
+
 
 @app.route('/api/food_entry', methods=['POST'])
 def food_entry():
     data = request.json
-    meal_name = data['meal_name']
-    meal_time = data['meal_time']
+    name = data['name']
+    timestamp = data['timestamp']
     total_carbs = data['total_carbs']
     
-    entry = log_food_entry(meal_name, meal_time, total_carbs)
+    entry = log_food_entry(name, timestamp, total_carbs)
     
+    entry.pop('_id', None)
     return jsonify({'status': 'success', 'entry': entry})
 
 @app.route('/api/exercise_entry', methods=['POST'])
 def exercise_entry():
     data = request.json
-    exercise_name = data['exercise_name']
-    exercise_time = data['exercise_time']
+    name = data['name']
+    timestamp = data['timestamp']
     time_spent = data['time_spent']
     intensity_level = data['intensity_level']
     
-    entry = log_exercise_entry(exercise_name, exercise_time, time_spent, intensity_level)
+    entry = log_exercise_entry(name, timestamp, time_spent, intensity_level)
     
+    entry.pop('_id', None)
     return jsonify({'status': 'success', 'entry': entry})
+
+@app.route('/api/log_entries', methods=['GET'])
+def get_all_entries():
+    entries = list(db.log_entries.find({}, {'_id': False}))
+    return jsonify({'status': 'success', 'entries': entries})
+
+
+# GET - Retrieve log entries by type (food or exercise)
+@app.route('/api/log_entries/<log_type>', methods=['GET'])
+def get_entries_by_type(log_type):
+    valid_types = ['food', 'exercise']
+    
+    if log_type not in valid_types:
+        return jsonify({'status': 'error', 'message': 'Invalid log type'}), 400
+    
+    entries = list(db.log_entries.find({'type': log_type}, {'_id': False}))
+    return jsonify({'status': 'success', 'entries': entries})
 
 @app.route('/api/login')
 def user_login():

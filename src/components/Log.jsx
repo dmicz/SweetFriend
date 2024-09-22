@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import filterIcon from "../assets/filter.svg";
 import sortIcon from "../assets/sort.svg";
 import "../styles/Log.css";
@@ -33,12 +33,33 @@ const itemsData = [
 
 function Log() {
 	const [items, setItems] = useState(itemsData);
+	const [allItems, setAllItems] = useState(itemsData);
 	const [showFilters, setShowFilters] = useState(false);
 	const [filters, setFilters] = useState({
 		food: true,
 		exercise: true,
 		starred: false,
 	});
+
+	useEffect(() => {
+		const fetchLogEntries = async () => {
+			try {
+				const response = await fetch("http://localhost:5000/api/log_entries");
+				const data = await response.json();
+				if (data.status === "success") {
+					setItems(data.entries);
+					setAllItems(data.entries);
+				} else {
+					console.error("Failed to fetch entries:", data.message);
+				}
+			} catch (error) {
+				console.error("Error fetching log entries:", error);
+			}
+		};
+
+		fetchLogEntries();
+	}, []);
+
 
 	// Handle sorting items by name
 	const sortItemsByName = () => {
@@ -48,7 +69,7 @@ function Log() {
 
 	// Handle filtering items by type or starred
 	const applyFilters = () => {
-		let filteredItems = itemsData;
+		let filteredItems = allItems;
 
 		if (!filters.food) {
 			filteredItems = filteredItems.filter((item) => item.type !== "food");
