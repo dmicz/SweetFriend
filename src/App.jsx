@@ -3,6 +3,7 @@ import Header from "./components/Header";
 import Dashboard from "./components/Dashboard";
 import Log from "./components/Log";
 import "./App.css";
+import ChatBot from "./components/Chatbot";
 
 function App() {
 	const [activePage, setActivePage] = useState("Dashboard");

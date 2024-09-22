@@ -7,6 +7,7 @@ import aiIcon from "../assets/ai.svg";
 import recentIcon from "../assets/recent.svg";
 import "../styles/Dashboard.css";
 import { DateTime } from 'luxon';
+import ReactMarkdown from "react-markdown";
 
 function Dashboard() {
 	// eslint-disable-next-line no-unused-vars
@@ -17,9 +18,13 @@ function Dashboard() {
 		exercise: [],
 	});
 
+	const [aiSuggestion, setAiSuggestion] = useState("Random AI suggestions will be displayed here. For example, &quot;You \
+						should drink more water&quot; or &quot;You should go for a \
+						walk.&quot;");
+
 	const fetchGlucoseReadings = async () => {
 		try {
-			const response = await fetch("http://localhost:5000/api/get_glucose");
+			const response = await fetch("https://sweet-friend.vercel.app/api/get_glucose");
 			const data = await response.json();
 
 			// Map the API response to the expected format
@@ -36,8 +41,20 @@ function Dashboard() {
 		}
 	};
 
+	const fetchAiSuggestion = async () => {
+		try {
+			const response = await fetch("https://sweet-friend.vercel.app/api/get_advice");
+			const data = await response.json();
+			setAiSuggestion(data.response); // Set the AI suggestion response
+		} catch (error) {
+			console.error("Error fetching AI suggestion:", error);
+		}
+	};
+
+
 	useEffect(() => {
 		fetchGlucoseReadings();
+		fetchAiSuggestion();
 	}, []);
 
 	useEffect(() => {
@@ -172,11 +189,7 @@ function Dashboard() {
 						<img src={aiIcon} alt="AI Icon" />
 						<h3>AI suggestions</h3>
 					</div>
-					<p>
-						Random AI suggestions will be displayed here. For example, &quot;You
-						should drink more water&quot; or &quot;You should go for a
-						walk.&quot;
-					</p>
+					<ReactMarkdown>{aiSuggestion || "Loading AI suggestion..."}</ReactMarkdown>
 				</div>
 				<div className="recent-logs">
 					<div className="dashboard-second-header">

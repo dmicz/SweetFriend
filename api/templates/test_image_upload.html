@@ -11,11 +11,5 @@
             <input type="file" name="file" accept="image/*">
             <input type="submit" value="Upload">
         </form>
-        <h2>Uploaded Images</h2>
-        <ul>
-            {% for img_url in image_urls %}
-                <li><img src="{{ img_url }}" alt="Image" width="100"></li>
-            {% endfor %}
-        </ul>
     </body>
 </html>
