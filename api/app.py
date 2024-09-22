@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template, redirect
+from flask import Flask, jsonify, request, render_template, redirect, session
 from flask_cors import CORS
 from twilio.rest import Client
 import requests
@@ -11,6 +11,7 @@ from flask_caching import Cache
 from bson import ObjectId
 from datetime import datetime
 from cerebras.cloud.sdk import Cerebras
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
 CORS(app)
@@ -28,6 +29,7 @@ else:
     app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'localhost:5000')
     app.config['MONGO_PASSWORD'] = os.environ.get('MONGO_PASSWORD')
     app.config['CEREBRAS_KEY'] = os.environ.get('CEREBRAS_KEY')
+    app.secret_key = os.environ.get('SECRET_KEY')
 
 app.config['DEXCOM_ACCESS_TOKEN'] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ZDdlMjI1Yy0xZDQyLTQzOTMtYWQ2Yy0zOWVhOGQ0ZjljNTUiLCJhdWQiOiJodHRwczovL3NhbmRib3gtYXBpLmRleGNvbS5jb20iLCJzY29wZSI6WyJlZ3YiLCJjYWxpYnJhdGlvbiIsImRldmljZSIsImV2ZW50Iiwic3RhdGlzdGljcyIsIm9mZmxpbmVfYWNjZXNzIl0sImlzcyI6Imh0dHBzOi8vc2FuZGJveC1hcGkuZGV4Y29tLmNvbSIsImV4cCI6MTcyNjk3MzE3OCwiaWF0IjoxNzI2OTY1OTc4LCJjbGllbnRfaWQiOiI2SkxYS0N2VEtMaG9mY3B0bnBKM21uaDZDaFpTb3ZwMyJ9.sOsHB1murQI0IBdrRbF5evdY4hRnyCAy_odrI7NcLFNS6_O91wE5FtW4_BOEVkaM6aUlGacbP9iHzFtxF-Ogq2yTG-hW5xpJaHmXeqCp8G1uCw0arf3jmn2C-pquJF4sxIAeVtV_tI1rWQerjhEsS2sE_KitXP_TNmXPDHuvuxhqJbmrV4ImpboHMP7rABRy7p2dTLRdMemGx-O21RAwF_ffU0nMCjsRrXoaAx4tOULCshHVpAjtSE6GF1UaZFw9tVpahQyg1HoIKi_TgN90IKLDnxrpdfVEMQ9pqj1w1DzjFt89vRg7hNeShEq_68de-xGVYvxbLn1Yr6KCXQaSCw"
 
@@ -440,48 +442,106 @@ def home():
     
     return render_template("docs.html", routes=routes)
 
-def log_food_entry(meal_name, meal_time, total_carbs):
-    food_entry = {
-        'meal_name': meal_name,
-        'meal_time': meal_time,
+def log_entry(name, log_type, timestamp, details):
+    entry = {
+        'name': name,
+        'type': log_type,
+        'timestamp': timestamp,
+        'starred': False
+    }
+
+    entry['details'] = details
+
+    db.log_entries.insert_one(entry)
+    return entry
+
+def log_food_entry(name, timestamp, total_carbs):
+    food_details = {
         'total_carbs': total_carbs
     }
-    db.food_entries.insert_one(food_entry)
-    return food_entry
+    return log_entry(name, 'food', timestamp, food_details)
 
-def log_exercise_entry(exercise_name, exercise_time, time_spent, intensity_level):
-    exercise_entry = {
-        'exercise_name': exercise_name,
-        'exercise_time': exercise_time,
+def log_exercise_entry(name, timestamp, time_spent, intensity_level):
+    exercise_details = {
         'time_spent': time_spent,
         'intensity_level': intensity_level
     }
-    db.exercise_entries.insert_one(exercise_entry)
-    return exercise_entry
+    return log_entry(name, 'exercise', timestamp, exercise_details)
+
 
 @app.route('/api/food_entry', methods=['POST'])
 def food_entry():
     data = request.json
-    meal_name = data['meal_name']
-    meal_time = data['meal_time']
+    name = data['name']
+    timestamp = data['timestamp']
     total_carbs = data['total_carbs']
     
-    entry = log_food_entry(meal_name, meal_time, total_carbs)
+    entry = log_food_entry(name, timestamp, total_carbs)
     
+    entry.pop('_id', None)
     return jsonify({'status': 'success', 'entry': entry})
 
 @app.route('/api/exercise_entry', methods=['POST'])
 def exercise_entry():
     data = request.json
-    exercise_name = data['exercise_name']
-    exercise_time = data['exercise_time']
+    name = data['name']
+    timestamp = data['timestamp']
     time_spent = data['time_spent']
     intensity_level = data['intensity_level']
     
-    entry = log_exercise_entry(exercise_name, exercise_time, time_spent, intensity_level)
+    entry = log_exercise_entry(name, timestamp, time_spent, intensity_level)
     
+    entry.pop('_id', None)
     return jsonify({'status': 'success', 'entry': entry})
 
-@app.route('/api/login')
+@app.route('/api/log_entries', methods=['GET'])
+def get_all_entries():
+    entries = list(db.log_entries.find({}, {'_id': False}))
+    return jsonify({'status': 'success', 'entries': entries})
+
+
+# GET - Retrieve log entries by type (food or exercise)
+@app.route('/api/log_entries/<log_type>', methods=['GET'])
+def get_entries_by_type(log_type):
+    valid_types = ['food', 'exercise']
+    
+    if log_type not in valid_types:
+        return jsonify({'status': 'error', 'message': 'Invalid log type'}), 400
+    
+    entries = list(db.log_entries.find({'type': log_type}, {'_id': False}))
+    return jsonify({'status': 'success', 'entries': entries})
+
+@app.route('/user_login', methods=['POST'])
 def user_login():
-    pass
+    username = request.form['username']
+    password = request.form['password']
+
+    user = db.users.find_one({'username': username})
+
+    if user and check_password_hash(user['password'], password):
+        session['username'] = username
+        session['logged_in'] = True
+        response = redirect('http://localhost:5173/home')
+        response.set_cookie('username', username)
+        response.set_cookie('logged_in', 'true')
+    else:
+        # Authentication failed
+        response = redirect('http://localhost:5173/')
+        response.set_cookie('username', '', expires=0)
+        response.set_cookie('logged_in', '', expires=0)
+
+    return response
+
+@app.route('/user_register', methods=['POST'])
+def user_register():
+    username = request.form['username']
+    password = request.form['password']
+
+    hashed_password = generate_password_hash(password)
+
+    db.users.insert_one({
+        'username': username,
+        'password': hashed_password
+    })
+
+    return redirect('http://localhost:5173/')
