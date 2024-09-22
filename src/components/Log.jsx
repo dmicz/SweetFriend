@@ -251,7 +251,7 @@ function Log() {
 			{/* List of Items */}
 			<List
 				items={items}
-				limit={5}
+				limit={15}
 				toggleStar={toggleStar}
 				onItemClick={handleItemClick}
 			/>
