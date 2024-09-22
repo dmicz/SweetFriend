@@ -1,6 +1,7 @@
 import "../styles/Header.css";
 import icon from "../assets/icon.svg";
 import PropTypes from "prop-types";
+import { Link } from "react-router-dom"; // Import Link from react-router-dom
 
 function Header({ activePage, onPageChange }) {
 	const handleTitleClick = () => {
@@ -14,28 +15,27 @@ function Header({ activePage, onPageChange }) {
 				<h1>Sweet Friend</h1>
 			</div>
 			<div className="links">
-				<a
-					href="#dashboard"
+				<Link
+					to="/app/dashboard"
 					className={activePage === "Dashboard" ? "active" : ""}
 					onClick={() => onPageChange("Dashboard")}
 				>
 					Dashboard
-				</a>
-				<a
-					href="#logs"
+				</Link>
+				<Link
+					to="/app/logs"
 					className={activePage === "Logs" ? "active" : ""}
 					onClick={() => onPageChange("Logs")}
 				>
 					Logs
-				</a>
-
-				<a
-					href="#chatbot"
+				</Link>
+				<Link
+					to="/app/chatbot"
 					className={activePage === "Chatbot" ? "active" : ""}
 					onClick={() => onPageChange("Chatbot")}
 				>
 					ChatBot
-				</a>
+				</Link>
 			</div>
 		</div>
 	);
