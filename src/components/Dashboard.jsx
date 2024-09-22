@@ -17,6 +17,10 @@ function Dashboard() {
 		exercise: [],
 	});
 
+	const [aiSuggestion, setAiSuggestion] = useState("Random AI suggestions will be displayed here. For example, &quot;You \
+						should drink more water&quot; or &quot;You should go for a \
+						walk.&quot;");
+
 	const fetchGlucoseReadings = async () => {
 		try {
 			const response = await fetch("https://sweet-friend.vercel.app/api/get_glucose");
@@ -36,8 +40,20 @@ function Dashboard() {
 		}
 	};
 
+	const fetchAiSuggestion = async () => {
+		try {
+			const response = await fetch("https://sweet-friend.vercel.app/api/get_advice");
+			const data = await response.json();
+			setAiSuggestion(data.response); // Set the AI suggestion response
+		} catch (error) {
+			console.error("Error fetching AI suggestion:", error);
+		}
+	};
+
+
 	useEffect(() => {
 		fetchGlucoseReadings();
+		fetchAiSuggestion();
 	}, []);
 
 	useEffect(() => {
@@ -172,11 +188,7 @@ function Dashboard() {
 						<img src={aiIcon} alt="AI Icon" />
 						<h3>AI suggestions</h3>
 					</div>
-					<p>
-						Random AI suggestions will be displayed here. For example, &quot;You
-						should drink more water&quot; or &quot;You should go for a
-						walk.&quot;
-					</p>
+					<p>{aiSuggestion || "Loading AI suggestion..."}</p>
 				</div>
 				<div className="recent-logs">
 					<div className="dashboard-second-header">
