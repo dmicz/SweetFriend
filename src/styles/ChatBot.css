@@ -24,10 +24,20 @@
   /* Chat bubble styles */
   .chat-bubble {
     margin: 10px 0;
-    padding: 10px;
+    padding: 20px 30px;
     border-radius: 10px;
     width: fit-content;
     max-width: 80%;
+    text-align: left;
+  }
+
+  .chat-bubble {
+    font-weight: 400;
+    font-size: 1.2em;
+  }
+
+  .chat-bubble p {
+    margin: 0;
   }
   
   .robot {
@@ -49,12 +59,18 @@
     background-color: #333;
   }
   
-  .input-container input {
+  .input-container textarea {
     flex: 1;
     padding: 10px;
     border-radius: 5px;
     border: none;
     outline: none;
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    width: 100%;
+    max-height: 300px;
+    overflow-y: auto;
+    resize: none;
+    font-size: 1.2em;
   }
   
   .input-container button {
