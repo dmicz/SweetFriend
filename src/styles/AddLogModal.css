@@ -43,6 +43,7 @@
 	display: grid;
 	grid-template-columns: min-content 1fr;
 	gap: 1rem;
+	align-items: center;
 }
 
 .exercise-form input {
@@ -61,4 +62,50 @@
 .exercise-form .form-buttons button:nth-of-type(1) {
 	background: red;
 	color: white;
+}
+
+.food-tabs {
+	display: flex;
+	gap: 1rem;
+	justify-content: center;
+	margin-bottom: 2rem;
+}
+
+.food-tabs button {
+	background: transparent;
+	color: rgba(255, 255, 255, 0.87);
+	border: none;
+	padding: 0.5rem 1rem;
+	cursor: pointer;
+	transition: color 0.3s ease;
+	border-radius: 0;
+}
+
+.food-tabs button.active:hover,
+.food-tabs button:hover {
+	background-color: rgba(75, 192, 192, 0.5);
+	border-radius: 6px;
+}
+
+.food-tabs button.active {
+	background: transparent;
+	color: rgba(75, 192, 192, 1);
+	border-bottom: 2px solid rgba(75, 192, 192, 1);
+}
+
+#reason-box {
+	display: flex;
+	align-items: flex-start;
+	color: rgba(75, 192, 192, 1);
+	text-align: left;
+}
+
+#reason-box h4,
+#reason-box p {
+	margin: 0;
+}
+
+#reason-box p {
+	white-space: pre-wrap; /* Ensures that newlines and spaces are preserved */
+	word-wrap: break-word; /* Breaks long words if necessary */
 }

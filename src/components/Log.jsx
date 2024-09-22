@@ -85,10 +85,14 @@ function Log() {
 		let filteredItems = allItems;
 
 		if (!filters.food) {
-			filteredItems = filteredItems.filter((item) => item.type !== "food");
+			filteredItems = filteredItems.filter(
+				(item) => item.type.toLowerCase() !== "food"
+			);
 		}
 		if (!filters.exercise) {
-			filteredItems = filteredItems.filter((item) => item.type !== "exercise");
+			filteredItems = filteredItems.filter(
+				(item) => item.type.toLowerCase() !== "exercise"
+			);
 		}
 		if (filters.starred) {
 			filteredItems = filteredItems.filter((item) => item.starred);
