@@ -32,7 +32,7 @@ function Header({ activePage, onPageChange }) {
 				<a
 					href="#chatbot"
 					className={activePage === "Chatbot" ? "active" : ""}
-					onClick={() => handlePageChange("Chatbot")}
+					onClick={() => onPageChange("Chatbot")}
 				>
 					ChatBot
 				</a>
