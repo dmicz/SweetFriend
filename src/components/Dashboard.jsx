@@ -15,9 +15,54 @@ function Dashboard() {
 	// eslint-disable-next-line no-unused-vars
 	const [glucoseReadings, setGlucoseReadings] = useState([]);
 	const [items, setItems] = useState([]);
-
 	const [selectedItem, setSelectedItem] = useState(null); // State to track the selected item
+	const [markers, setMarkers] = useState({
+		food: [],
+		exercise: [],
+	});
+	const [aiSuggestion, setAiSuggestion] = useState("Random AI suggestions will be displayed here. For example, &quot;You \
+			should drink more water&quot; or &quot;You should go for a \
+			walk.&quot;");
 
+	useEffect(() => {
+		const fetchLogEntries = async () => {
+			try {
+			const response = await fetch("/api/log_entries");
+			const data = await response.json();
+			if (data.status === "success") {
+				setItems(data.entries);
+	
+				// Extract food and exercise markers from entries
+				const foodMarkers = data.entries
+				.filter((entry) => entry.type === "Food")
+				.map((entry) => ({
+					x: DateTime.fromISO(entry.timestamp).toJSDate(),
+					y: Math.max(...glucoseReadings.map(reading => reading.value)), // y is not needed for markers, just the timestamp
+				}));
+	
+				const exerciseMarkers = data.entries
+				.filter((entry) => entry.type === "Exercise")
+				.map((entry) => ({
+					x: DateTime.fromISO(entry.timestamp).toJSDate(),
+					y: 100,
+				}));
+	
+				setMarkers({
+				food: foodMarkers,
+				exercise: exerciseMarkers,
+				});
+			} else {
+				console.error("Failed to fetch entries:", data.message);
+			}
+			} catch (error) {
+			console.error("Error fetching log entries:", error);
+			}
+		};
+			
+	fetchLogEntries();
+	}, []);
+
+							
 	// Function to show the modal with the selected item details
 	const handleItemClick = (item) => {
 		setSelectedItem(item);
@@ -52,14 +97,6 @@ function Dashboard() {
 		setItems(updatedItems);
 	};
 
-	const [markers, setMarkers] = useState({
-		food: [],
-		exercise: [],
-	});
-
-	const [aiSuggestion, setAiSuggestion] = useState("Random AI suggestions will be displayed here. For example, &quot;You \
-						should drink more water&quot; or &quot;You should go for a \
-						walk.&quot;");
 
 	const fetchGlucoseReadings = async () => {
 		try {
