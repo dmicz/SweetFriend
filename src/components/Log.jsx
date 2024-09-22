@@ -44,7 +44,7 @@ function Log() {
 	useEffect(() => {
 		const fetchLogEntries = async () => {
 			try {
-				const response = await fetch("http://localhost:5000/api/log_entries");
+				const response = await fetch("/api/log_entries");
 				const data = await response.json();
 				if (data.status === "success") {
 					setItems(data.entries);

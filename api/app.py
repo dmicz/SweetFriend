@@ -516,13 +516,13 @@ def user_login():
         session['username'] = username
         session['user_id'] = str(user['_id'])
         session['logged_in'] = True
-        response = redirect('http://localhost:5173/app/dashboard')
+        response = redirect(request.referrer + 'app/dashboard')
         response.set_cookie('username', username)
         response.set_cookie('user_id', str(user['_id']))
         response.set_cookie('logged_in', 'true')
     else:
         # Authentication failed
-        response = redirect('http://localhost:5173/')
+        response = redirect(request.referrer)
         response.set_cookie('username', '', expires=0)
         response.set_cookie('user_id', '', expires=0)
         response.set_cookie('logged_in', '', expires=0)

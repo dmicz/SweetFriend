@@ -11,7 +11,7 @@ const LoginForm = () => {
   return (
     <div className='dialog'>
         <div className='wrapper'>
-            <form method="post" action='http://localhost:5000/user_login'>
+            <form method="post" action='/api/user_login'>
                 <h1>Login</h1>
                 <div className="input-box">
                     <input name="username" type="text" placeholder="Username" required />
