@@ -19,6 +19,7 @@ function App() {
 			<Header activePage={activePage} onPageChange={handlePageChange} />
 			{activePage === "Dashboard" && <Dashboard />}
 			{activePage === "Logs" && <Log />}
+			{activePage === "Chatbot" && <ChatBot />}
 		</>
 	);
 }
