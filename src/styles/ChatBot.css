@@ -32,8 +32,12 @@
 	font-size: 1.2em;
 }
 
-.chat-bubble p {
-	margin: 0;
+.chat-bubble p:nth-of-type(1) {
+	margin-top: 0;
+}
+
+.chat-bubble p:last-of-type {
+	margin-bottom: 0;
 }
 
 .robot {
