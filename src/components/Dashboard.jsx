@@ -9,11 +9,24 @@ import "../styles/Dashboard.css";
 import { DateTime } from 'luxon';
 import ReactMarkdown from "react-markdown";
 import List from "./List";
+import Modal from "./Modal";
 
 function Dashboard() {
 	// eslint-disable-next-line no-unused-vars
 	const [glucoseReadings, setGlucoseReadings] = useState([]);
 	const [items, setItems] = useState([]);
+
+	const [selectedItem, setSelectedItem] = useState(null); // State to track the selected item
+
+	// Function to show the modal with the selected item details
+	const handleItemClick = (item) => {
+		setSelectedItem(item);
+	};
+
+	// Function to close the modal
+	const closeModal = () => {
+		setSelectedItem(null);
+	};
 
 	useEffect(() => {
 		const fetchLogEntries = async () => {
@@ -173,8 +186,8 @@ function Dashboard() {
 										display: true,
 										text: "Time (24-Hour Format)",
 									},
-									min: "2024-09-21T00:00:00",
-									max: "2024-09-21T23:59:59",
+									min: "2024-09-22T00:00:00",
+									max: "2024-09-22T23:59:59",
 								},
 								y: {
 									title: {
@@ -182,8 +195,8 @@ function Dashboard() {
 										text: "Glucose Level (mg/dL)",
 									},
 									beginAtZero: false,
-									min: Math.min(glucoseReadings.values) * 0.95,
-									max: Math.max(glucoseReadings.values) * 1.05,
+									min: Math.min(...glucoseReadings.map(reading => reading.value)) * 0.95,
+									max: Math.max(...glucoseReadings.map(reading => reading.value)) * 1.05,
 								},
 							},
 							plugins: {
@@ -224,7 +237,8 @@ function Dashboard() {
 					</div>
 					
 					<div className="small-log">
-						<List items={items} limit={5} toggleStar={toggleStar} />
+						<List items={items} limit={5} toggleStar={toggleStar} onItemClick={handleItemClick} />
+						{selectedItem && <Modal item={selectedItem} onClose={closeModal} />}
 					</div>
 				</div>
 			</div>
