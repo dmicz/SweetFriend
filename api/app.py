@@ -7,12 +7,17 @@ import json
 import sqlite3
 import os
 from pymongo.mongo_client import MongoClient 
+from flask_caching import Cache
 from bson import ObjectId
 from datetime import datetime
 from cerebras.cloud.sdk import Cerebras
 
 app = Flask(__name__)
 CORS(app)
+
+cache = Cache(config={'CACHE_TYPE': 'simple'})
+cache.init_app(app)
+
 if os.environ.get('VERCEL', None) != "True":
     app.config.from_file('config.json', load=json.load) 
 else:
@@ -386,6 +391,7 @@ def chat():
 
 
 @app.route('/api/get_advice')
+@cache.cached(timeout=60) 
 def get_advice():    
     # Fetch recent data for context
     recent_glucose, recent_events = get_recent_data()
@@ -475,3 +481,7 @@ def exercise_entry():
     entry = log_exercise_entry(exercise_name, exercise_time, time_spent, intensity_level)
     
     return jsonify({'status': 'success', 'entry': entry})
+
+@app.route('/api/login')
+def user_login():
+    pass
