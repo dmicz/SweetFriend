@@ -48,9 +48,9 @@ function AddLogModal({ onClose, onSubmit }) {
 				body: formData,
 			});
 			const data = await response.json();
-
+			console.log(data);
 			// Assuming API returns { name, total_carbs }
-			setName(data.name || ""); // Set the name from API response
+			setName(data.meal_name || ""); // Set the name from API response
 			setTotalCarbs(data.total_carbs || ""); // Set the total carbs from API response
 		} catch (error) {
 			console.error("Error uploading image:", error);
