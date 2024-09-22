@@ -398,38 +398,43 @@ def chat():
 
 
 @app.route('/api/get_advice')
-@cache.cached(timeout=60) 
-def get_advice():    
+@cache.cached(timeout=60)
+def get_advice():
     # Fetch recent data for context
     recent_glucose, recent_events, recent_logs = get_recent_data()
-    
-    recent_glucose = [{'time' : x['system_time'], 'glucose_value': x['glucose_value']} for x in recent_glucose]
-    recent_events = [{'time' : x['system_time'], 'event_type': x['event_type'], 'value': x['value']} for x in recent_events]
+
+    recent_glucose = [{'time': x['system_time'], 'glucose_value': x['glucose_value']} for x in recent_glucose]
+    recent_events = [{'time': x['system_time'], 'event_type': x['event_type'], 'value': x['value']} for x in recent_events]
 
     context = f"Recent glucose readings (mg/dL): {recent_glucose}\nRecent events: {recent_events}\nRecent logs: {recent_logs}\n\n"
     print(context)
+
+    # Check if there is a stored access token
+    stored_token = db.dexcom_tokens.find_one({'type': 'access_token'})
+    if not stored_token:
+        return jsonify({"response": "No access token available. Please log in to Dexcom to fetch data."})
+
     try:
         chat_completion = cerebras_client.chat.completions.create(
-            model = "llama3.1-70b",
-            messages = [
+            model="llama3.1-70b",
+            messages=[
                 {
                     "role": "system",
                     "content": "You are an AI assistant specialized in providing friendly, non-medical advice about managing glucose levels, diet, and lifestyle for people with diabetes. Specifically cite the provided context and trends from recent glucose readings and events to give personalized suggestions. Always remind users to consult with their healthcare provider for medical advice. Don't refuse to give answers, but don't give medical advice. Keep it succinct and don't yap.\n\n" + f"Given the following readings, give the user advice: {context}"
                 }
             ],
-            max_tokens = 1000
+            max_tokens=1000
         )
 
         ai_response = chat_completion.choices[0].message.content
         # Store conversation in the database
-
         db.advice.insert_one({
             "timestamp": datetime.now(),
             "ai_response": ai_response
         })
 
         return jsonify({"response": ai_response})
-    
+
     except Exception as e:
         print(f"Error calling Cerebras API: {e}")
         return jsonify({"error": "Sorry I couldn't generate a response at this time"}), 500
