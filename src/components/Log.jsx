@@ -85,10 +85,10 @@ function Log() {
 		let filteredItems = allItems;
 
 		if (!filters.food) {
-			filteredItems = filteredItems.filter((item) => item.type !== "food");
+			filteredItems = filteredItems.filter((item) => item.type !== "Food");
 		}
 		if (!filters.exercise) {
-			filteredItems = filteredItems.filter((item) => item.type !== "exercise");
+			filteredItems = filteredItems.filter((item) => item.type !== "Exercise");
 		}
 		if (filters.starred) {
 			filteredItems = filteredItems.filter((item) => item.starred);
@@ -110,9 +110,35 @@ function Log() {
 
 	// Toggle the starred state of an item
 	const toggleStar = (index) => {
-		const updatedItems = [...items];
-		updatedItems[index].starred = !updatedItems[index].starred; // Toggle starred
+	    const updatedItems = [...items];
+		const itemToUpdate = updatedItems[index];
+		
+		// Toggle the local starred state
+		itemToUpdate.starred = !itemToUpdate.starred;
 		setItems(updatedItems);
+		
+		// Send the updated star state to the backend
+		fetch("/api/log_entries/toggle_star", {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify({
+				entry_id: itemToUpdate._id, // Use MongoDB ID
+				starred: itemToUpdate.starred, // New starred state
+			}),
+		})
+		.then((response) => response.json())
+		.then((data) => {
+			if (data.status === "success") {
+				console.log("Starred state updated successfully");
+			} else {
+				console.error("Failed to update starred state:", data.message);
+			}
+		})
+		.catch((error) => {
+			console.error("Error updating starred state:", error);
+		});
 	};
 
 	// Function to show the modal with the selected item details
@@ -128,6 +154,28 @@ function Log() {
 	// Function to handle adding a new log
 	const addNewLog = (newLog) => {
 		setItems([newLog, ...items]);
+		// Determine the type of log and the appropriate API endpoint
+		const endpoint = newLog.type === "Food" ? "/api/food_entry" : "/api/exercise_entry";
+		console.log("Adding new log entry:", newLog);
+				// Send the new log to the server
+		fetch(endpoint, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(newLog),
+		})
+			.then((response) => response.json())
+			.then((data) => {
+				if (data.status === "success") {
+					console.log("Log entry added successfully:", data.entry);
+				} else {
+					console.error("Failed to add log entry:", data.message);
+				}
+			})
+			.catch((error) => {
+				console.error("Error adding log entry:", error);
+			});
 		setShowAddLogModal(false); // Close the add log modal
 	};
 
