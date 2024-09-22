@@ -1,9 +1,9 @@
 import React from 'react';
-import './LoginForm.css';
+import './RegisterForm.css';
 import { useNavigate } from "react-router-dom";
 
 
-const LoginForm = () => {
+const RegisterForm = () => {
     const navigate= useNavigate();
     function handleClick(){
         navigate("/home");
@@ -11,8 +11,8 @@ const LoginForm = () => {
   return (
     <div className='dialog'>
         <div className='wrapper'>
-            <form method="post" action='http://localhost:5000/user_login'>
-                <h1>Login</h1>
+            <form method="post" action='http://localhost:5000/user_register'>
+                <h1>Register</h1>
                 <div className="input-box">
                     <input name="username" type="text" placeholder="Username" required />
                     
@@ -21,13 +21,9 @@ const LoginForm = () => {
                     <input name="password" type="password" placeholder="Password" required/>
                     
                 </div>
-                <div className="remember-forgot">
-                    <label><input type="checkbox" />Remember me</label>
-                    <a href="#">Forgot password</a>
-                </div>
-                <button type="submit">Login</button>
-                <div className="register-link">
-                    <p>Don't have an account? <a href="/register">Register</a></p>
+                <button type="submit">Register</button>
+                <div className="login-link">
+                    <p>Have an account? <a href="/">Login</a></p>
                 </div>
             </form>
 
@@ -36,4 +32,4 @@ const LoginForm = () => {
   )
 }
 
-export default LoginForm
+export default RegisterForm

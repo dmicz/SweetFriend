@@ -1,4 +1,4 @@
-from flask import Flask, jsonify, request, render_template, redirect
+from flask import Flask, jsonify, request, render_template, redirect, session
 from flask_cors import CORS
 from twilio.rest import Client
 import requests
@@ -11,6 +11,7 @@ from flask_caching import Cache
 from bson import ObjectId
 from datetime import datetime
 from cerebras.cloud.sdk import Cerebras
+from werkzeug.security import check_password_hash, generate_password_hash
 
 app = Flask(__name__)
 CORS(app)
@@ -28,6 +29,7 @@ else:
     app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'localhost:5000')
     app.config['MONGO_PASSWORD'] = os.environ.get('MONGO_PASSWORD')
     app.config['CEREBRAS_KEY'] = os.environ.get('CEREBRAS_KEY')
+    app.secret_key = os.environ.get('SECRET_KEY')
 
 app.config['DEXCOM_ACCESS_TOKEN'] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ZDdlMjI1Yy0xZDQyLTQzOTMtYWQ2Yy0zOWVhOGQ0ZjljNTUiLCJhdWQiOiJodHRwczovL3NhbmRib3gtYXBpLmRleGNvbS5jb20iLCJzY29wZSI6WyJlZ3YiLCJjYWxpYnJhdGlvbiIsImRldmljZSIsImV2ZW50Iiwic3RhdGlzdGljcyIsIm9mZmxpbmVfYWNjZXNzIl0sImlzcyI6Imh0dHBzOi8vc2FuZGJveC1hcGkuZGV4Y29tLmNvbSIsImV4cCI6MTcyNjk3MzE3OCwiaWF0IjoxNzI2OTY1OTc4LCJjbGllbnRfaWQiOiI2SkxYS0N2VEtMaG9mY3B0bnBKM21uaDZDaFpTb3ZwMyJ9.sOsHB1murQI0IBdrRbF5evdY4hRnyCAy_odrI7NcLFNS6_O91wE5FtW4_BOEVkaM6aUlGacbP9iHzFtxF-Ogq2yTG-hW5xpJaHmXeqCp8G1uCw0arf3jmn2C-pquJF4sxIAeVtV_tI1rWQerjhEsS2sE_KitXP_TNmXPDHuvuxhqJbmrV4ImpboHMP7rABRy7p2dTLRdMemGx-O21RAwF_ffU0nMCjsRrXoaAx4tOULCshHVpAjtSE6GF1UaZFw9tVpahQyg1HoIKi_TgN90IKLDnxrpdfVEMQ9pqj1w1DzjFt89vRg7hNeShEq_68de-xGVYvxbLn1Yr6KCXQaSCw"
 
@@ -509,6 +511,37 @@ def get_entries_by_type(log_type):
     entries = list(db.log_entries.find({'type': log_type}, {'_id': False}))
     return jsonify({'status': 'success', 'entries': entries})
 
-@app.route('/api/login')
+@app.route('/user_login', methods=['POST'])
 def user_login():
-    pass
+    username = request.form['username']
+    password = request.form['password']
+
+    user = db.users.find_one({'username': username})
+
+    if user and check_password_hash(user['password'], password):
+        session['username'] = username
+        session['logged_in'] = True
+        response = redirect('http://localhost:5173/home')
+        response.set_cookie('username', username)
+        response.set_cookie('logged_in', 'true')
+    else:
+        # Authentication failed
+        response = redirect('http://localhost:5173/')
+        response.set_cookie('username', '', expires=0)
+        response.set_cookie('logged_in', '', expires=0)
+
+    return response
+
+@app.route('/user_register', methods=['POST'])
+def user_register():
+    username = request.form['username']
+    password = request.form['password']
+
+    hashed_password = generate_password_hash(password)
+
+    db.users.insert_one({
+        'username': username,
+        'password': hashed_password
+    })
+
+    return redirect('http://localhost:5173/')
