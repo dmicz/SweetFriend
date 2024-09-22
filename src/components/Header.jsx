@@ -35,6 +35,14 @@ function Header() {
 				>
 					Logs
 				</a>
+
+				<a
+					href="#chatbot"
+					className={activePage === "Chatbot" ? "active" : ""}
+					onClick={() => handlePageChange("Chatbot")}
+				>
+					ChatBot
+				</a>
 			</div>
 		</div>
 	);
