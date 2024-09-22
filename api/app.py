@@ -89,7 +89,14 @@ def callback():
     tokens = response.json()
     access_token = tokens['access_token']
     print(access_token)
-    app.config['DEXCOM_ACCESS_TOKEN'] = access_token
+
+    # Store the Dexcom access token in MongoDB
+    db.dexcom_tokens.update_one(
+        {'type': 'access_token'},
+        {'$set': {'token': access_token, 'timestamp': datetime.now()}},
+        upsert=True
+    )
+
 
     fetch_and_store_glucose(access_token)
     fetch_and_store_events(access_token)
@@ -129,9 +136,7 @@ def fetch_and_store_glucose(access_token):
         db.glucose_readings.insert_one({
             'system_time': reading['systemTime'],
             'display_time': reading['displayTime'],
-            'glucose_value': reading['value'],
-            'trend': reading['trend'],
-            'trend_rate': reading['trendRate']
+            'glucose_value': reading['value']
         })
         
 
@@ -171,13 +176,12 @@ def fetch_and_store_alerts(access_token):
     print(alert_data)
     for alert in alert_data.get('records', []):
         db.glucose_alerts.insert_one({
-            'alert_id': alert['alertId'],
             'system_time': alert['systemTime'],
             'display_time': alert['displayTime'],
-            'alert_type': alert['alertType'],
-            'alert_value': alert['alertValue'],
-            'unit': alert['unit'],
-            'alert_status': alert['alertStatus']
+            'alert_name': alert['alertName'],
+            'alert_state': alert['alertState'],
+            'display_device': alert['displayDevice'],
+            'transmitter_generation': alert['transmitterGeneration']
         })
 
 def fetch_and_store_calibrations(access_token):
@@ -202,7 +206,8 @@ def fetch_and_store_calibrations(access_token):
 
 @app.route('/api/get_glucose')
 def get_glucose():
-    headers = {'Authorization': f'Bearer {app.config['DEXCOM_ACCESS_TOKEN']}'}
+    stored_token = db.dexcom_tokens.find_one({'type': 'access_token'})
+    headers = {'Authorization': f'Bearer {stored_token['token']}'}
     glucose_url = f'{DEXCOM_API_URL}/v3/users/self/egvs'
     params = {
         'startDate': '2024-01-01T00:00:00',
