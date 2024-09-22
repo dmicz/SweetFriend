@@ -108,3 +108,11 @@
     text-decoration: underline;
 
 }
+
+.dialog {
+    margin: 10vh 0;
+}
+
+.dialog * {
+	box-sizing: border-box;
+}
