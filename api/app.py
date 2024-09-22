@@ -29,6 +29,8 @@ else:
     app.config['SERVER_NAME'] = os.environ.get('SERVER_NAME', 'localhost:5000')
     app.config['MONGO_PASSWORD'] = os.environ.get('MONGO_PASSWORD')
     app.config['CEREBRAS_KEY'] = os.environ.get('CEREBRAS_KEY')
+    app.config['TUNE_AUTH'] = os.environ.get('TUNE_AUTH')
+    app.config['TUNE_ORG_ID'] = os.environ.get('TUNE_ORG_ID')
     app.secret_key = os.environ.get('SECRET_KEY')
 
 # Set up Mongo URI
