@@ -89,7 +89,14 @@ def callback():
     tokens = response.json()
     access_token = tokens['access_token']
     print(access_token)
-    app.config['DEXCOM_ACCESS_TOKEN'] = access_token
+
+    # Store the Dexcom access token in MongoDB
+    db.dexcom_tokens.update_one(
+        {'type': 'access_token'},
+        {'$set': {'token': access_token, 'timestamp': datetime.now()}},
+        upsert=True
+    )
+
 
     fetch_and_store_glucose(access_token)
     fetch_and_store_events(access_token)
@@ -129,9 +136,7 @@ def fetch_and_store_glucose(access_token):
         db.glucose_readings.insert_one({
             'system_time': reading['systemTime'],
             'display_time': reading['displayTime'],
-            'glucose_value': reading['value'],
-            'trend': reading['trend'],
-            'trend_rate': reading['trendRate']
+            'glucose_value': reading['value']
         })
         
 
@@ -171,13 +176,12 @@ def fetch_and_store_alerts(access_token):
     print(alert_data)
     for alert in alert_data.get('records', []):
         db.glucose_alerts.insert_one({
-            'alert_id': alert['alertId'],
             'system_time': alert['systemTime'],
             'display_time': alert['displayTime'],
-            'alert_type': alert['alertType'],
-            'alert_value': alert['alertValue'],
-            'unit': alert['unit'],
-            'alert_status': alert['alertStatus']
+            'alert_name': alert['alertName'],
+            'alert_state': alert['alertState'],
+            'display_device': alert['displayDevice'],
+            'transmitter_generation': alert['transmitterGeneration']
         })
 
 def fetch_and_store_calibrations(access_token):
@@ -202,7 +206,8 @@ def fetch_and_store_calibrations(access_token):
 
 @app.route('/api/get_glucose')
 def get_glucose():
-    headers = {'Authorization': f'Bearer {app.config['DEXCOM_ACCESS_TOKEN']}'}
+    stored_token = db.dexcom_tokens.find_one({'type': 'access_token'})
+    headers = {'Authorization': f'Bearer {stored_token['token']}'}
     glucose_url = f'{DEXCOM_API_URL}/v3/users/self/egvs'
     params = {
         'startDate': '2024-01-01T00:00:00',
@@ -332,10 +337,10 @@ def analyze_image():
     
 def get_recent_data():
     #Fetch recent glucose readings
-    recent_glucose = list(db.glucose_readings.find().sort("system_time",-1).limit(10))
+    recent_glucose = list(db.glucose_readings.find().sort("system_time",-1).limit(100))
 
     #Fetch recent events
-    recent_events = list(db.dexcom_events.find().sort('system_time', -1).limit(10))
+    recent_events = list(db.dexcom_events.find().sort('system_time', -1).limit(100))
 
     # Return the recent logs
     recent_logs = list(db.log_entries.find().sort('timestamp', -1).limit(10))
@@ -442,74 +447,73 @@ def home():
     
     return render_template("docs.html", routes=routes)
 
-def log_entry(name, log_type, timestamp, details):
+def log_entry(user_id, name, log_type, timestamp, details):
     entry = {
+        'user_id': user_id,
         'name': name,
         'type': log_type,
         'timestamp': timestamp,
-        'starred': False
+        'starred': False,
+        'details': details
     }
-
-    entry['details'] = details
 
     db.log_entries.insert_one(entry)
     return entry
 
-def log_food_entry(name, timestamp, total_carbs):
-    food_details = {
-        'total_carbs': total_carbs
-    }
-    return log_entry(name, 'food', timestamp, food_details)
-
-def log_exercise_entry(name, timestamp, time_spent, intensity_level):
-    exercise_details = {
-        'time_spent': time_spent,
-        'intensity_level': intensity_level
-    }
-    return log_entry(name, 'exercise', timestamp, exercise_details)
-
-
 @app.route('/api/food_entry', methods=['POST'])
 def food_entry():
     data = request.json
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User not logged in'}), 401
+    
     name = data['name']
     timestamp = data['timestamp']
-    total_carbs = data['total_carbs']
+    total_carbs = data['details']['total_carbs']
     
-    entry = log_food_entry(name, timestamp, total_carbs)
+    entry = log_entry(user_id, name, 'Food', timestamp, details=json.dumps({'total_carbs': total_carbs}))
     
-    entry.pop('_id', None)
+    entry['_id'] = str(entry['_id'])
     return jsonify({'status': 'success', 'entry': entry})
 
 @app.route('/api/exercise_entry', methods=['POST'])
 def exercise_entry():
     data = request.json
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User not logged in'}), 401
+    
     name = data['name']
     timestamp = data['timestamp']
-    time_spent = data['time_spent']
-    intensity_level = data['intensity_level']
+    time_spent = data['details']['time_spent']
+    intensity_level = data['details']['intensity_level']
     
-    entry = log_exercise_entry(name, timestamp, time_spent, intensity_level)
+    entry = log_entry(user_id, name, 'Exercise', timestamp, details=json.dumps({'time_spent': time_spent, 'intensity_level': intensity_level}))
     
-    entry.pop('_id', None)
+    entry['_id'] = str(entry['_id'])
     return jsonify({'status': 'success', 'entry': entry})
 
 @app.route('/api/log_entries', methods=['GET'])
 def get_all_entries():
-    entries = list(db.log_entries.find({}, {'_id': False}))
+    user_id = session.get('user_id')
+    if not user_id:
+        return jsonify({'status': 'error', 'message': 'User not logged in'}), 401
+    
+    entries = list(db.log_entries.find({'user_id': user_id}))
+    entries = list(db.log_entries.find())
+    for entry in entries:
+        entry['_id'] = str(entry['_id'])
     return jsonify({'status': 'success', 'entries': entries})
 
-
-# GET - Retrieve log entries by type (food or exercise)
-@app.route('/api/log_entries/<log_type>', methods=['GET'])
-def get_entries_by_type(log_type):
-    valid_types = ['food', 'exercise']
+@app.route('/api/log_entries/toggle_star', methods=['POST'])
+def toggle_star():
+    data = request.json
+    entry_id = data['entry_id']
+    starred = data['starred']
     
-    if log_type not in valid_types:
-        return jsonify({'status': 'error', 'message': 'Invalid log type'}), 400
+    db.log_entries.update_one({'_id': ObjectId(entry_id)}, {'$set': {'starred': starred}})
     
-    entries = list(db.log_entries.find({'type': log_type}, {'_id': False}))
-    return jsonify({'status': 'success', 'entries': entries})
+    return jsonify({'status': 'success'})
 
 @app.route('/api/user_login', methods=['POST'])
 def user_login():
