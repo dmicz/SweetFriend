@@ -64,7 +64,7 @@ def login():
     auth_url = f"{DEXCOM_API_URL}/v2/oauth2/login?client_id={app.config['DEXCOM_CLIENT']}&redirect_uri={HTTP_PREFIX + app.config['SERVER_NAME'] + '/callback'}&response_type=code&scope=offline_access"
     return redirect(auth_url)
 
-@app.route('/twilio_send')
+@app.route('/api/twilio_send')
 def twilio_send():
     message = twilio_client.messages.create(
         from_='+18449053950',
@@ -212,13 +212,7 @@ def get_glucose():
     
     return jsonify(glucose_data)
 
-# ==========================
-# Existing Routes for Image Upload
-# ==========================
 
-@app.route('/')
-def upload_form():
-    return render_template("test_image_upload.html")
 
 @app.route('/api/analyze_image', methods=['POST'])
 def analyze_image():
@@ -429,7 +423,7 @@ def get_advice():
         print(f"Error calling Cerebras API: {e}")
         return jsonify({"error": "Sorry I couldn't generate a response at this time"}), 500
 
-@app.route('/api/')
+@app.route('/api')
 def home():
     routes = []
     for rule in app.url_map.iter_rules():
@@ -511,7 +505,7 @@ def get_entries_by_type(log_type):
     entries = list(db.log_entries.find({'type': log_type}, {'_id': False}))
     return jsonify({'status': 'success', 'entries': entries})
 
-@app.route('/user_login', methods=['POST'])
+@app.route('/api/user_login', methods=['POST'])
 def user_login():
     username = request.form['username']
     password = request.form['password']
@@ -520,19 +514,22 @@ def user_login():
 
     if user and check_password_hash(user['password'], password):
         session['username'] = username
+        session['user_id'] = str(user['_id'])
         session['logged_in'] = True
-        response = redirect('http://localhost:5173/home')
+        response = redirect('http://localhost:5173/app/dashboard')
         response.set_cookie('username', username)
+        response.set_cookie('user_id', str(user['_id']))
         response.set_cookie('logged_in', 'true')
     else:
         # Authentication failed
         response = redirect('http://localhost:5173/')
         response.set_cookie('username', '', expires=0)
+        response.set_cookie('user_id', '', expires=0)
         response.set_cookie('logged_in', '', expires=0)
 
     return response
 
-@app.route('/user_register', methods=['POST'])
+@app.route('/api/user_register', methods=['POST'])
 def user_register():
     username = request.form['username']
     password = request.form['password']
