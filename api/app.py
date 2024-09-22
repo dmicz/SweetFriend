@@ -31,8 +31,6 @@ else:
     app.config['CEREBRAS_KEY'] = os.environ.get('CEREBRAS_KEY')
     app.secret_key = os.environ.get('SECRET_KEY')
 
-app.config['DEXCOM_ACCESS_TOKEN'] = "eyJ0eXAiOiJKV1QiLCJhbGciOiJSUzI1NiJ9.eyJzdWIiOiI4ZDdlMjI1Yy0xZDQyLTQzOTMtYWQ2Yy0zOWVhOGQ0ZjljNTUiLCJhdWQiOiJodHRwczovL3NhbmRib3gtYXBpLmRleGNvbS5jb20iLCJzY29wZSI6WyJlZ3YiLCJjYWxpYnJhdGlvbiIsImRldmljZSIsImV2ZW50Iiwic3RhdGlzdGljcyIsIm9mZmxpbmVfYWNjZXNzIl0sImlzcyI6Imh0dHBzOi8vc2FuZGJveC1hcGkuZGV4Y29tLmNvbSIsImV4cCI6MTcyNjk3MzE3OCwiaWF0IjoxNzI2OTY1OTc4LCJjbGllbnRfaWQiOiI2SkxYS0N2VEtMaG9mY3B0bnBKM21uaDZDaFpTb3ZwMyJ9.sOsHB1murQI0IBdrRbF5evdY4hRnyCAy_odrI7NcLFNS6_O91wE5FtW4_BOEVkaM6aUlGacbP9iHzFtxF-Ogq2yTG-hW5xpJaHmXeqCp8G1uCw0arf3jmn2C-pquJF4sxIAeVtV_tI1rWQerjhEsS2sE_KitXP_TNmXPDHuvuxhqJbmrV4ImpboHMP7rABRy7p2dTLRdMemGx-O21RAwF_ffU0nMCjsRrXoaAx4tOULCshHVpAjtSE6GF1UaZFw9tVpahQyg1HoIKi_TgN90IKLDnxrpdfVEMQ9pqj1w1DzjFt89vRg7hNeShEq_68de-xGVYvxbLn1Yr6KCXQaSCw"
-
 # Set up Mongo URI
 app.config['MONGO_URI'] = f"mongodb+srv://dennismiczek:{app.config['MONGO_PASSWORD']}@sweetfriendcluster.yzcni.mongodb.net/?retryWrites=true&w=majority&appName=SweetFriendCluster"
 twilio_client = Client(app.config['TWILIO_ACCOUNT_SID'], app.config['TWILIO_AUTH_TOKEN'])
@@ -329,13 +327,15 @@ def analyze_image():
     
 def get_recent_data():
     #Fetch recent glucose readings
-
     recent_glucose = list(db.glucose_readings.find().sort("system_time",-1).limit(10))
 
     #Fetch recent events
     recent_events = list(db.dexcom_events.find().sort('system_time', -1).limit(10))
 
-    return recent_glucose, recent_events
+    # Return the recent logs
+    recent_logs = list(db.log_entries.find().sort('timestamp', -1).limit(10))
+
+    return recent_glucose, recent_events, recent_logs
 
 @app.route('/api/chat', methods = ['POST'])
 def chat():
@@ -346,12 +346,13 @@ def chat():
         return jsonify({"error" "Message is required"}), 400
     
     # Fetch recent data for context
-    recent_glucose, recent_events = get_recent_data()
+    recent_glucose, recent_events, recent_logs = get_recent_data()
     
     recent_glucose = [{'time' : x['system_time'], 'glucose_value': x['glucose_value']} for x in recent_glucose]
     recent_events = [{'time' : x['system_time'], 'event_type': x['event_type'], 'value': x['value']} for x in recent_events]
+    recent_logs = [{'time' : x['timestamp'], 'name': x['name'], 'type': x['type'], 'details': x['details']} for x in recent_logs]
 
-    context = f"Recent glucose readings (mg/dL): {recent_glucose}\nRecent events: {recent_events}\n\n"
+    context = f"Recent glucose readings (mg/dL): {recent_glucose}\nRecent events: {recent_events}\nRecent logs: {recent_logs}\n\n"
     print(context)
     try:
         chat_completion = cerebras_client.chat.completions.create(
@@ -390,12 +391,12 @@ def chat():
 @cache.cached(timeout=60) 
 def get_advice():    
     # Fetch recent data for context
-    recent_glucose, recent_events = get_recent_data()
+    recent_glucose, recent_events, recent_logs = get_recent_data()
     
     recent_glucose = [{'time' : x['system_time'], 'glucose_value': x['glucose_value']} for x in recent_glucose]
     recent_events = [{'time' : x['system_time'], 'event_type': x['event_type'], 'value': x['value']} for x in recent_events]
 
-    context = f"Recent glucose readings (mg/dL): {recent_glucose}\nRecent events: {recent_events}\n\n"
+    context = f"Recent glucose readings (mg/dL): {recent_glucose}\nRecent events: {recent_events}\nRecent logs: {recent_logs}\n\n"
     print(context)
     try:
         chat_completion = cerebras_client.chat.completions.create(
