@@ -1,13 +1,14 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Header from "./components/Header";
 import Dashboard from "./components/Dashboard";
 import Log from "./components/Log";
 import "./App.css";
 import LoginForm from "./components/LoginForm/LoginForm";
 import RegisterForm from "./components/RegisterForm/RegisterForm";
-import { Route, Routes } from "react-router-dom";
+import { Route, Routes, useNavigate } from "react-router-dom";
 import "./index.css";
 import ChatBot from "./components/Chatbot";
+import Cookies from "js-cookie";
 
 function App() {
 	const [activePage, setActivePage] = useState("Dashboard");
@@ -16,6 +17,14 @@ function App() {
 	const handlePageChange = (page) => {
 		setActivePage(page);
 	};
+
+	const navigate = useNavigate();
+
+	useEffect(() => {
+		if (Cookies.get("logged_in") === "true") {
+			navigate("/app/dashboard");
+		}
+	}, []);
 
 	return (
 		<>

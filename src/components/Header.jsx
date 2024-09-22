@@ -57,6 +57,11 @@ function Header({ activePage, onPageChange }) {
 				>
 					ChatBot
 				</Link>
+				<a
+					href="/api/signout"
+				>
+					Sign Out
+				</a>
 			</div>
 		</div>
 	);
