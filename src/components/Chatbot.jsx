@@ -7,6 +7,8 @@ const ChatBot = () => {
 	const [chatMessages, setChatMessages] = useState([]); // Store all chat messages (both user and AI)
 	const [isLoading, setIsLoading] = useState(false); // Handle loading state
 	const textareaRef = useRef(null); // Reference for the textarea
+	const chatWindowRef = useRef(null); // Reference for the chat window (for scrolling)
+	const lastMessageRef = useRef(null); // Reference for the last message to scroll into view
 
 	// Adjust textarea height based on its content
 	const adjustTextareaHeight = () => {
@@ -77,14 +79,34 @@ const ChatBot = () => {
 		adjustTextareaHeight();
 	}, []);
 
+	useEffect(() => {
+		const chatWindow = chatWindowRef.current;
+		if (chatWindow) {
+			chatWindow.scrollTop = chatWindow.scrollHeight; // Scroll to the bottom
+		}
+	}, [chatMessages]);
+
+	useEffect(() => {
+		if (lastMessageRef.current) {
+			lastMessageRef.current.scrollIntoView({ behavior: "smooth" });
+		}
+	}, [chatMessages]);
+
 	return (
 		<div className="chat-container">
 			<div className="chat-window">
-				{chatMessages.map((msg, index) => (
-					<div key={index} className={`chat-bubble ${msg.sender}`}>
-						<ReactMarkdown>{msg.content}</ReactMarkdown>
-					</div>
-				))}
+				{chatMessages.map((msg, index) => {
+					const isLastMessage = index === chatMessages.length - 1;
+					return (
+						<div
+							key={index}
+							className={`chat-bubble ${msg.sender}`}
+							ref={isLastMessage ? lastMessageRef : null} // Attach ref to the last message
+						>
+							<ReactMarkdown>{msg.content}</ReactMarkdown>
+						</div>
+					);
+				})}
 				{isLoading && <div className="chat-bubble robot">AI is typing...</div>}{" "}
 				{/* Display loading text */}
 			</div>
