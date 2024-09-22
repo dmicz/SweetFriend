@@ -8,6 +8,8 @@ import RegisterForm from "./components/RegisterForm/RegisterForm";
 import { Route, Routes } from "react-router-dom";
 import "./index.css";
 import ChatBot from "./components/Chatbot";
+import StarredLogs from "./components/StarredLogs"; // Import the new StarredLogs component
+
 
 function App() {
 	const [activePage, setActivePage] = useState("Dashboard");
@@ -32,6 +34,7 @@ function App() {
 							<Routes>
 								<Route path="dashboard" element={<Dashboard />} />
 								<Route path="logs" element={<Log />} />
+								<Route path="starred-logs" element={<StarredLogs />} /> {/* New route */}
 								<Route path="chatbot" element={<ChatBot />} />
 							</Routes>
 						</>

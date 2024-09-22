@@ -9,15 +9,17 @@ function Header({ activePage, onPageChange }) {
 
 	// Set the active page based on the URL path during the initial render
 	const determineActivePage = (path) => {
-		if (path.includes("dashboard")) {
-			return "Dashboard";
-		} else if (path.includes("logs")) {
-			return "Logs";
-		} else if (path.includes("chatbot")) {
-			return "Chatbot";
+		if (path.includes("/app/starred-logs")) {
+		  return "StarredLogs"; // Prioritize starred-logs over logs
+		} else if (path.includes("/app/logs")) {
+		  return "Logs"; 
+		} else if (path.includes("/app/chatbot")) {
+		  return "Chatbot";
+		} else if (path.includes("/app/dashboard")) {
+		  return "Dashboard";
 		}
 		return "Dashboard"; // Default to Dashboard if no match
-	};
+	  };
 
 	// Get the initial active page value based on the URL
 	useEffect(() => {
@@ -49,6 +51,13 @@ function Header({ activePage, onPageChange }) {
 					onClick={() => onPageChange("Logs")}
 				>
 					Logs
+				</Link>
+				<Link
+					to="/app/starred-logs"
+					className={activePage === "StarredLogs" ? "active" : ""}
+					onClick={() => onPageChange("StarredLogs")}
+				>
+					Starred Logs
 				</Link>
 				<Link
 					to="/app/chatbot"
