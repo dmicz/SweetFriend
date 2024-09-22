@@ -109,3 +109,11 @@
 	white-space: pre-wrap; /* Ensures that newlines and spaces are preserved */
 	word-wrap: break-word; /* Breaks long words if necessary */
 }
+
+#reason-markdown {
+	display: block;
+}
+
+#reason-markdown ul {
+	padding-left: 40px;
+}
