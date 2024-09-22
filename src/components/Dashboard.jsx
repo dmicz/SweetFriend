@@ -216,10 +216,6 @@ function Dashboard() {
 						/>
 					)}
 				</div>
-				{/* Add Log button */}
-				<button onClick={openAddLogModal} className="add-log-button">
-					Add Log
-				</button>
 			</div>
 			<div className="dashboard-second-div">
 				<div className="ai-suggestions">
