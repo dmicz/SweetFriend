@@ -545,3 +545,12 @@ def user_register():
     })
 
     return redirect('http://localhost:5173/')
+
+@app.route('/api/signout')
+def user_signout():
+    response = redirect('/')
+    response.set_cookie('username', '', expires=0)
+    response.set_cookie('user_id', '', expires=0)
+    response.set_cookie('logged_in', '', expires=0)
+
+    return response
