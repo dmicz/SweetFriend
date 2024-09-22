@@ -6,12 +6,12 @@ import { useNavigate } from "react-router-dom";
 const RegisterForm = () => {
     const navigate= useNavigate();
     function handleClick(){
-        navigate("/home");
+        navigate("/app/dashboard");
     }
-  return (
+return (
     <div className='dialog'>
-        <div className='wrapper'>
-            <form method="post" action='http://localhost:5000/user_register'>
+            <div className='wrapper'>
+            <form method="post" action='/api/user_register'>
                 <h1>Register</h1>
                 <div className="input-box">
                     <input name="username" type="text" placeholder="Username" required />

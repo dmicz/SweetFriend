@@ -91,14 +91,14 @@
     font-weight: 700;
 }
 
-.wrapper .register-link {
+.wrapper .login-link {
     font-size: 14.5px;
     text-align: center;
     margin: 20px 0 15px;
 
 }
 
-.register-link p a {
+.login-link p a {
     color: #fff;
     text-decoration: none;
     font-weight: 600;
@@ -110,7 +110,10 @@
 }
 
 .dialog {
-    margin: 10vh 0;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
 }
 
 .dialog * {
