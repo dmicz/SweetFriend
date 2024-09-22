@@ -12,7 +12,11 @@
     padding: 30px 40px;
 
 }
+img{
+    
+    max-width: 25%;
 
+}
 .wrapper h1 {
     font-size: 36px;
     text-align: center;
