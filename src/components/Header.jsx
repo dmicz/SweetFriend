@@ -4,16 +4,16 @@ import PropTypes from "prop-types";
 import { Link } from "react-router-dom"; // Import Link from react-router-dom
 
 function Header({ activePage, onPageChange }) {
-	const handleTitleClick = () => {
-		window.location.reload();
-	};
-
 	return (
 		<div className="header">
-			<div className="title" onClick={handleTitleClick}>
+			<Link
+				className="title"
+				to="/app/dashboard"
+				onClick={() => onPageChange("Dashboard")}
+			>
 				<img src={icon} alt="Sweet Friend's Icon" />
 				<h1>Sweet Friend</h1>
-			</div>
+			</Link>
 			<div className="links">
 				<Link
 					to="/app/dashboard"

@@ -4,7 +4,7 @@ import starIcon from "../assets/star.svg";
 import starFilledIcon from "../assets/star-filled.svg";
 import "../styles/List.css";
 
-function List({ items, limit, toggleStar }) {
+function List({ items, limit, toggleStar, onItemClick }) {
 	// prop validation
 	List.propTypes = {
 		items: PropTypes.arrayOf(
@@ -17,6 +17,7 @@ function List({ items, limit, toggleStar }) {
 		).isRequired,
 		limit: PropTypes.number,
 		toggleStar: PropTypes.func.isRequired,
+		onItemClick: PropTypes.func.isRequired, // Add onItemClick prop
 	};
 
 	// default prop for limit
@@ -32,12 +33,15 @@ function List({ items, limit, toggleStar }) {
 	return (
 		<ul>
 			{items.slice(0, limit).map((item, index) => (
-				<li key={index} className="list-item">
+				<li key={index} className="list-item" onClick={() => onItemClick(item)}>
 					<span>{item.name}</span>
 					<div className="right-list-item">
 						<span>{formatTimestamp(item.timestamp)}</span>
 						<span
-							onClick={() => toggleStar(index)} // Toggle star on click
+							onClick={(e) => {
+								e.stopPropagation(); // Prevent modal from opening on star click
+								toggleStar(index);
+							}}
 							style={{ cursor: "pointer" }}
 						>
 							<img

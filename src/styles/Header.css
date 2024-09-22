@@ -18,13 +18,14 @@
 
 .title h1 {
 	margin: 0;
+	color: rgba(75, 192, 192, 1);
 	font-size: 2rem;
 	text-shadow: none;
 	transition: text-shadow 0.3s ease-in-out, transform 0.3s ease-in-out;
 }
 
 .title:hover h1 {
-	text-shadow: 0 0 0.5rem #646cff;
+	text-shadow: 0 0 5px rgba(75, 192, 192, 1);
 	transform: translateY(-2px);
 }
 
@@ -47,12 +48,21 @@
 .header .links a {
 	color: rgba(75, 192, 192, 1);
 	text-decoration: none;
+	padding: 0.5rem;
+	display: flex;
+	gap: 0.5rem;
+	border-radius: 5px;
+	border: 2px solid rgba(75, 192, 192, 1);
+	transition: background-color 0.3s ease, color 0.3s ease;
+	cursor: pointer;
 }
 
 .header .links a:hover {
-	text-decoration: underline;
+	background-color: rgba(75, 192, 192, 0.5);
 }
 
 .header .links a.active {
 	font-weight: bold;
+	background-color: rgba(75, 192, 192, 1);
+	color: white;
 }

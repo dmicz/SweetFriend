@@ -28,10 +28,17 @@
 
 .list-item {
 	display: flex;
+	align-items: center;
 	justify-content: space-between;
 	gap: 1rem;
 	padding: 1rem;
 	border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+	cursor: pointer;
+	transition: background-color 0.3s ease;
+}
+
+.list-item:hover {
+	background-color: rgba(255, 255, 255, 0.12);
 }
 
 .list-item:nth-of-type(1) {
@@ -53,7 +60,7 @@
 	align-items: center;
 }
 
-.star-icon:hover {
-	cursor: pointer;
-	transform: scale(1.2);
+.list-item span {
+	font-weight: bold;
+	color: rgba(75, 192, 192, 1);
 }
