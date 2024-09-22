@@ -1,0 +1,64 @@
+.add-logs-type-button {
+	display: flex;
+	gap: 1.5rem;
+	justify-content: center;
+	align-items: center;
+}
+
+.add-logs-type-button button {
+	border: 2px solid rgba(75, 192, 192, 1);
+	color: rgba(75, 192, 192, 1);
+	padding: 0.5rem 1rem;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+.add-logs-type-button button:hover {
+	background-color: rgba(75, 192, 192, 0.5);
+	border: 2px solid rgba(75, 192, 192, 0.5);
+}
+
+.exercise-form {
+	display: flex;
+	flex-direction: column;
+	gap: 1rem;
+}
+
+.exercise-form button {
+	background: rgba(75, 192, 192, 1);
+	color: #242424;
+	padding: 0.5rem;
+	border: none;
+	border-radius: 6px;
+	cursor: pointer;
+	transition: background-color 0.3s ease;
+}
+
+.exercise-form button:hover {
+	background: rgba(75, 192, 192, 0.5);
+}
+
+.exercise-form div {
+	display: grid;
+	grid-template-columns: min-content 1fr;
+	gap: 1rem;
+}
+
+.exercise-form input {
+	background: #242424;
+	color: rgba(255, 255, 255, 0.87);
+	border: 2px solid rgba(75, 192, 192, 1);
+	padding: 0.5rem;
+	border-radius: 6px;
+}
+
+.exercise-form label {
+	color: rgba(75, 192, 192, 1);
+	text-wrap: nowrap;
+}
+
+.exercise-form .form-buttons button:nth-of-type(1) {
+	background: red;
+	color: white;
+}

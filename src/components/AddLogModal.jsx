@@ -71,22 +71,29 @@ function AddLogModal({ onClose, onSubmit }) {
 					{manualEntry ? (
 						// Manual food entry form
 						<form onSubmit={handleFormSubmit}>
-							<label>Name:</label>
-							<input
-								type="text"
-								value={name}
-								onChange={(e) => setName(e.target.value)}
-								required
-							/>
-							<label>Total Carbs (g):</label>
-							<input
-								type="number"
-								step="0.1"
-								value={totalCarbs}
-								onChange={(e) => setTotalCarbs(e.target.value)}
-								required
-							/>
-							<button type="submit">Submit</button>
+							<div>
+								<label>Name:</label>
+								<input
+									type="text"
+									value={name}
+									onChange={(e) => setName(e.target.value)}
+									required
+								/>
+							</div>
+							<div>
+								<label>Total Carbs (g):</label>
+								<input
+									type="number"
+									step="0.1"
+									value={totalCarbs}
+									onChange={(e) => setTotalCarbs(e.target.value)}
+									required
+								/>
+							</div>
+							<div className="form-buttons">
+								<button onClick={() => setLogType(null)}>Back</button>
+								<button type="submit">Submit</button>
+							</div>
 						</form>
 					) : (
 						// Image upload form
@@ -96,9 +103,14 @@ function AddLogModal({ onClose, onSubmit }) {
 							encType="multipart/form-data"
 							onSubmit={handleImageUpload}
 						>
-							<label>Upload Food Image:</label>
-							<input type="file" name="file" accept="image/*" required />
-							<button type="submit">Upload</button>
+							<div>
+								<label>Upload Food Image:</label>
+								<input type="file" name="file" accept="image/*" required />
+							</div>
+							<div className="form-buttons">
+								<button onClick={() => setLogType(null)}>Back</button>
+								<button type="submit">Upload</button>
+							</div>
 						</form>
 					)}
 				</>
@@ -106,29 +118,38 @@ function AddLogModal({ onClose, onSubmit }) {
 		} else if (logType === "exercise") {
 			// Exercise form
 			return (
-				<form onSubmit={handleFormSubmit}>
-					<label>Name:</label>
-					<input
-						type="text"
-						value={name}
-						onChange={(e) => setName(e.target.value)}
-						required
-					/>
-					<label>Time Spent (minutes):</label>
-					<input
-						type="number"
-						value={timeSpent}
-						onChange={(e) => setTimeSpent(e.target.value)}
-						required
-					/>
-					<label>Intensity Level:</label>
-					<input
-						type="text"
-						value={intensityLevel}
-						onChange={(e) => setIntensityLevel(e.target.value)}
-						required
-					/>
-					<button type="submit">Submit</button>
+				<form onSubmit={handleFormSubmit} className="exercise-form">
+					<div>
+						<label>Name:</label>
+						<input
+							type="text"
+							value={name}
+							onChange={(e) => setName(e.target.value)}
+							required
+						/>
+					</div>
+					<div>
+						<label>Time Spent (minutes):</label>
+						<input
+							type="number"
+							value={timeSpent}
+							onChange={(e) => setTimeSpent(e.target.value)}
+							required
+						/>
+					</div>
+					<div>
+						<label>Intensity Level:</label>
+						<input
+							type="text"
+							value={intensityLevel}
+							onChange={(e) => setIntensityLevel(e.target.value)}
+							required
+						/>
+					</div>
+					<div className="form-buttons">
+						<button onClick={() => setLogType(null)}>Back</button>
+						<button type="submit">Submit</button>
+					</div>
 				</form>
 			);
 		}
@@ -147,14 +168,13 @@ function AddLogModal({ onClose, onSubmit }) {
 					{logType === null ? (
 						<>
 							<h3>Select Log Type:</h3>
-							<button onClick={() => setLogType("food")}>Food</button>
-							<button onClick={() => setLogType("exercise")}>Exercise</button>
+							<div className="add-logs-type-button">
+								<button onClick={() => setLogType("food")}>Food</button>
+								<button onClick={() => setLogType("exercise")}>Exercise</button>
+							</div>
 						</>
 					) : (
-						<>
-							{renderForm()}
-							<button onClick={() => setLogType(null)}>Back</button>
-						</>
+						<>{renderForm()}</>
 					)}
 				</div>
 			</div>

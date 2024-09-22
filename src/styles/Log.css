@@ -14,6 +14,7 @@
 
 .log-buttons {
 	display: flex;
+	gap: 1rem;
 }
 
 .log-buttons button {
@@ -23,6 +24,7 @@
 	gap: 0.75rem;
 	align-items: center;
 	padding: 0.6em;
+	justify-content: center;
 }
 
 .log-buttons img {
@@ -67,4 +69,23 @@
 .list-item span {
 	font-weight: bold;
 	color: rgba(75, 192, 192, 1);
+}
+
+.log-buttons .add-log-button {
+	background-color: green;
+}
+
+.log-buttons .add-log-button:hover {
+	background-color: darkgreen;
+}
+
+.log-buttons .filter-button,
+.log-buttons .sort-button {
+	background-color: #1a1a1a;
+	border: 1px solid #ffffffde;
+}
+
+.log-buttons .filter-button:hover,
+.log-buttons .sort-button:hover {
+	border: 1px solid #646cff;
 }
