@@ -42,11 +42,13 @@ function Log() {
 	const [items, setItems] = useState(itemsData);
 	const [allItems, setAllItems] = useState(itemsData);
 	const [showFilters, setShowFilters] = useState(false);
+	const [showSort, setShowSort] = useState(false);
 	const [filters, setFilters] = useState({
 		food: true,
 		exercise: true,
 		starred: false,
 	});
+	const [sortOrder, setSortOrder] = useState("nameAsc"); // Default sorting by name ascending
 	const [showAddLogModal, setShowAddLogModal] = useState(false); // Modal state for adding log
 	const [selectedItem, setSelectedItem] = useState(null); // State to track the selected item
 
@@ -74,10 +76,20 @@ function Log() {
 		fetchLogEntries();
 	}, []);
 
-	// Handle sorting items by name
-	const sortItemsByName = () => {
-		const sortedItems = [...items].sort((a, b) => a.name.localeCompare(b.name));
+	// Handle sorting items
+	const sortItems = () => {
+		let sortedItems = [...items];
+		if (sortOrder === "nameAsc") {
+			sortedItems = sortedItems.sort((a, b) => a.name.localeCompare(b.name));
+		} else if (sortOrder === "nameDesc") {
+			sortedItems = sortedItems.sort((a, b) => b.name.localeCompare(a.name));
+		} else if (sortOrder === "dateAsc") {
+			sortedItems = sortedItems.sort((a, b) => a.timestamp - b.timestamp);
+		} else if (sortOrder === "dateDesc") {
+			sortedItems = sortedItems.sort((a, b) => b.timestamp - a.timestamp);
+		}
 		setItems(sortedItems);
+		setShowSort(false); // Close sort dialog after sorting
 	};
 
 	// Handle filtering items by type or starred
@@ -88,24 +100,18 @@ function Log() {
 			filteredItems = filteredItems.filter(
 				(item) => item.type.toLowerCase() !== "food"
 			);
-			filteredItems = filteredItems.filter((item) => item.type !== "Food");
 		}
 		if (!filters.exercise) {
 			filteredItems = filteredItems.filter(
 				(item) => item.type.toLowerCase() !== "exercise"
 			);
-			filteredItems = filteredItems.filter((item) => item.type !== "Exercise");
 		}
 		if (filters.starred) {
 			filteredItems = filteredItems.filter((item) => item.starred);
 		}
 
 		setItems(filteredItems);
-	};
-
-	// Handle filter toggle (show/hide filter dialog)
-	const toggleFilters = () => {
-		setShowFilters(!showFilters);
+		setShowFilters(false); // Close filter dialog after applying filters
 	};
 
 	// Handle checkbox filter changes
@@ -114,37 +120,16 @@ function Log() {
 		setFilters((prevFilters) => ({ ...prevFilters, [name]: checked }));
 	};
 
+	// Handle radio button sort changes
+	const handleSortChange = (e) => {
+		setSortOrder(e.target.value);
+	};
+
 	// Toggle the starred state of an item
 	const toggleStar = (index) => {
 		const updatedItems = [...items];
-		const itemToUpdate = updatedItems[index];
-
-		// Toggle the local starred state
-		itemToUpdate.starred = !itemToUpdate.starred;
+		updatedItems[index].starred = !updatedItems[index].starred; // Toggle starred
 		setItems(updatedItems);
-
-		// Send the updated star state to the backend
-		fetch("/api/log_entries/toggle_star", {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify({
-				entry_id: itemToUpdate._id, // Use MongoDB ID
-				starred: itemToUpdate.starred, // New starred state
-			}),
-		})
-			.then((response) => response.json())
-			.then((data) => {
-				if (data.status === "success") {
-					console.log("Starred state updated successfully");
-				} else {
-					console.error("Failed to update starred state:", data.message);
-				}
-			})
-			.catch((error) => {
-				console.error("Error updating starred state:", error);
-			});
 	};
 
 	// Function to show the modal with the selected item details
@@ -162,7 +147,9 @@ function Log() {
 		setItems([newLog, ...items]);
 		// Determine the type of log and the appropriate API endpoint
 		const endpoint =
-			newLog.type.toLowerCase() === "food" ? "/api/food_entry" : "/api/exercise_entry";
+			newLog.type.toLowerCase() === "food"
+				? "/api/food_entry"
+				: "/api/exercise_entry";
 		console.log("Adding new log entry:", newLog);
 		// Send the new log to the server
 		fetch(endpoint, {
@@ -190,15 +177,24 @@ function Log() {
 		<div className="log">
 			<div className="list-header">
 				<h2>Logs</h2>
+
+				{/* Add search bar here */}
+
 				<div className="log-buttons">
 					{/* Filter Button */}
-					<button className="filter-button" onClick={toggleFilters}>
+					<button
+						className="filter-button"
+						onClick={() => setShowFilters(!showFilters)}
+					>
 						Filter
 						<img src={filterIcon} alt="Filter Icon" />
 					</button>
 
 					{/* Sort Button */}
-					<button className="sort-button" onClick={sortItemsByName}>
+					<button
+						className="sort-button"
+						onClick={() => setShowSort(!showSort)}
+					>
 						Sort
 						<img src={sortIcon} alt="Sort Icon" />
 					</button>
@@ -217,6 +213,7 @@ function Log() {
 			{/* Filter Dialog */}
 			{showFilters && (
 				<div className="filter-dialog">
+					<h3>Filter Logs</h3>
 					<label>
 						<input
 							type="checkbox"
@@ -245,6 +242,54 @@ function Log() {
 						Starred
 					</label>
 					<button onClick={applyFilters}>Apply Filters</button>
+				</div>
+			)}
+
+			{/* Sort Dialog */}
+			{showSort && (
+				<div className="sort-dialog">
+					<h3>Sort Logs</h3>
+					<label>
+						<input
+							type="radio"
+							name="sort"
+							value="nameAsc"
+							checked={sortOrder === "nameAsc"}
+							onChange={handleSortChange}
+						/>
+						Name (Ascending)
+					</label>
+					<label>
+						<input
+							type="radio"
+							name="sort"
+							value="nameDesc"
+							checked={sortOrder === "nameDesc"}
+							onChange={handleSortChange}
+						/>
+						Name (Descending)
+					</label>
+					<label>
+						<input
+							type="radio"
+							name="sort"
+							value="dateAsc"
+							checked={sortOrder === "dateAsc"}
+							onChange={handleSortChange}
+						/>
+						Date (Ascending)
+					</label>
+					<label>
+						<input
+							type="radio"
+							name="sort"
+							value="dateDesc"
+							checked={sortOrder === "dateDesc"}
+							onChange={handleSortChange}
+						/>
+						Date (Descending)
+					</label>
+					<button onClick={sortItems}>Apply Sorting</button>
 				</div>
 			)}
 

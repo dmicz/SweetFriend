@@ -89,3 +89,130 @@
 .log-buttons .sort-button:hover {
 	border: 1px solid #646cff;
 }
+
+/* Log.css */
+
+/* Styles for the filter and sort buttons */
+.filter-button,
+.sort-button,
+.add-log-button {
+	background-color: #f0f0f0;
+	border: none;
+	padding: 10px 15px;
+	cursor: pointer;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	gap: 8px;
+	border-radius: 4px;
+}
+
+.filter-button img,
+.sort-button img,
+.add-log-button img {
+	width: 20px;
+	height: 20px;
+}
+
+.list-header {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	margin-bottom: 20px;
+}
+
+.log-buttons {
+	display: flex;
+	gap: 10px;
+}
+
+/* Styles for dialog boxes */
+.filter-dialog,
+.sort-dialog {
+	background-color: #333;
+	border: 1px solid #555;
+	padding: 20px;
+	position: absolute;
+	top: 100px; /* Adjust depending on your UI layout */
+	right: 20px; /* Adjust depending on your UI layout */
+	width: 300px;
+	box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.1);
+	border-radius: 8px;
+	z-index: 10;
+}
+
+.filter-dialog h3,
+.sort-dialog h3 {
+	margin-top: 0;
+	margin-bottom: 15px;
+	font-size: 1.25em;
+	color: #fff;
+}
+
+.filter-dialog label,
+.sort-dialog label {
+	display: block;
+	margin-bottom: 10px;
+	font-size: 1em;
+	cursor: pointer;
+	color: #fff;
+}
+
+.filter-dialog input[type="checkbox"],
+.sort-dialog input[type="radio"] {
+	margin-right: 10px;
+	transform: scale(1.2); /* Make the checkboxes and radio buttons bigger */
+}
+
+.filter-dialog button,
+.sort-dialog button {
+	background-color: #007bff;
+	color: white;
+	border: none;
+	padding: 10px 15px;
+	border-radius: 4px;
+	cursor: pointer;
+	display: block;
+	width: 100%;
+	margin-top: 15px;
+	font-size: 1em;
+}
+
+.filter-dialog button:hover,
+.sort-dialog button:hover {
+	background-color: #0056b3;
+}
+
+/* Close button for modals */
+.close-button {
+	background-color: transparent;
+	border: none;
+	font-size: 1.5em;
+	cursor: pointer;
+	position: absolute;
+	right: 15px;
+	top: 10px;
+}
+
+/* Ensure modal overlay is behind everything */
+.modal-overlay {
+	background-color: rgba(0, 0, 0, 0.5);
+	position: fixed;
+	top: 0;
+	left: 0;
+	right: 0;
+	bottom: 0;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+	z-index: 9;
+}
+
+.modal-content {
+	background-color: white;
+	padding: 20px;
+	width: 400px;
+	border-radius: 8px;
+	box-shadow: 0px 4px 8px rgba(0, 0, 0, 0.2);
+	position: relative;
+}

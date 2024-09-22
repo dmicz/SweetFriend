@@ -11,6 +11,7 @@ const LoginForm = () => {
   return (
     <div className='dialog'>
         <div className='wrapper'>
+            <img className="login_logo" src="/src/assets/login_icon.svg" alt="Sweet Friend's Icon"></img>
             <form method="post" action='/api/user_login'>
                 <h1>Login</h1>
                 <div className="input-box">
