@@ -1,6 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import "../styles/ChatBot.css";
 import ReactMarkdown from "react-markdown";
+import icon from "../assets/icon.svg";
 
 const ChatBot = () => {
 	const [message, setMessage] = useState(""); // Store the current user message
@@ -95,6 +96,9 @@ const ChatBot = () => {
 	return (
 		<div className="chat-container">
 			<div className="chat-window">
+                <div className="logo-container">
+                    <img src = {icon} alt="logo" className="chat-logo"/>
+                </div>
 				{chatMessages.map((msg, index) => {
 					const isLastMessage = index === chatMessages.length - 1;
 					return (

@@ -15,7 +15,22 @@
 	display: flex;
 	flex-direction: column;
 	padding: 0 2rem;
+    position: relative;
 }
+
+.logo-container {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50% ) ;
+    z-index: 0;
+}
+
+.chat-logo {
+    opacity: 0.2;
+    max-width: 200px;
+    max-height: 200px;
+  }
 
 /* Chat bubble styles */
 .chat-bubble {
@@ -30,6 +45,8 @@
 .chat-bubble {
 	font-weight: 400;
 	font-size: 1.2em;
+    position: relative
+    
 }
 
 .chat-bubble p:nth-of-type(1) {
