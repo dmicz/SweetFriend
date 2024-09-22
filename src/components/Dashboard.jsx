@@ -8,10 +8,36 @@ import recentIcon from "../assets/recent.svg";
 import "../styles/Dashboard.css";
 import { DateTime } from 'luxon';
 import ReactMarkdown from "react-markdown";
+import List from "./List";
 
 function Dashboard() {
 	// eslint-disable-next-line no-unused-vars
 	const [glucoseReadings, setGlucoseReadings] = useState([]);
+	const [items, setItems] = useState([]);
+
+	useEffect(() => {
+		const fetchLogEntries = async () => {
+			try {
+				const response = await fetch("/api/log_entries");
+				const data = await response.json();
+				if (data.status === "success") {
+					setItems(data.entries);
+				} else {
+					console.error("Failed to fetch entries:", data.message);
+				}
+			} catch (error) {
+				console.error("Error fetching log entries:", error);
+			}
+		};
+
+		fetchLogEntries();
+	}, []);
+
+	const toggleStar = (index) => {
+		const updatedItems = [...items];
+		updatedItems[index].starred = !updatedItems[index].starred; // Toggle starred
+		setItems(updatedItems);
+	};
 
 	const [markers, setMarkers] = useState({
 		food: [],
@@ -24,7 +50,7 @@ function Dashboard() {
 
 	const fetchGlucoseReadings = async () => {
 		try {
-			const response = await fetch("https://sweet-friend.vercel.app/api/get_glucose");
+			const response = await fetch("/api/get_glucose");
 			const data = await response.json();
 
 			// Map the API response to the expected format
@@ -43,7 +69,7 @@ function Dashboard() {
 
 	const fetchAiSuggestion = async () => {
 		try {
-			const response = await fetch("https://sweet-friend.vercel.app/api/get_advice");
+			const response = await fetch("/api/get_advice");
 			const data = await response.json();
 			setAiSuggestion(data.response); // Set the AI suggestion response
 		} catch (error) {
@@ -196,11 +222,10 @@ function Dashboard() {
 						<img src={recentIcon} alt="Recent Icon" />
 						<h3>Recent Logs</h3>
 					</div>
-					<p>
-						Recent logs will be displayed here. For example, &quot;You ate a
-						burger at 12:30 PM&quot; or &quot;You exercised for 30 minutes at 3
-						PM.&quot;
-					</p>
+					
+					<div className="small-log">
+						<List items={items} limit={5} toggleStar={toggleStar} />
+					</div>
 				</div>
 			</div>
 		</div>

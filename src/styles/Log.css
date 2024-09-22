@@ -2,6 +2,10 @@
 	padding: 2rem;
 }
 
+.small-log ul {
+	padding-left: 0;
+}
+
 .list-header {
 	display: flex;
 	justify-content: space-between;
