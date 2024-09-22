@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import filterIcon from "../assets/filter.svg";
 import sortIcon from "../assets/sort.svg";
+import addIcon from "../assets/add.svg";
 import "../styles/Log.css";
 import List from "./List";
 import Modal from "./Modal";
@@ -54,11 +55,11 @@ function Log() {
 			try {
 				const response = await fetch("/api/log_entries");
 				const data = await response.json();
-				
+
 				if (data.status === "success") {
-					const entriesWithDate = data.entries.map(entry => ({
+					const entriesWithDate = data.entries.map((entry) => ({
 						...entry,
-						timestamp: new Date(entry.timestamp)
+						timestamp: new Date(entry.timestamp),
 					}));
 					setItems(entriesWithDate);
 					setAllItems(entriesWithDate);
@@ -153,6 +154,7 @@ function Log() {
 						onClick={() => setShowAddLogModal(true)}
 					>
 						Add Log
+						<img src={addIcon} alt="Add Icon" />
 					</button>
 				</div>
 			</div>
