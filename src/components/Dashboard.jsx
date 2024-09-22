@@ -162,64 +162,63 @@ function Dashboard() {
 			<div className="dashboard-first-div">
 				{/* Line chart for glucose readings */}
 				<div style={{ height: "400px", width: "100%", cursor: "pointer" }}>
-					<Line
-						data={data}
-						options={{
-							responsive: true,
-							maintainAspectRatio: false,
-							fullSize: true,
-							layout: {
-								padding: 0,
-							},
-							scales: {
-								x: {
-									type: "time",
-									time: {
-										tooltipFormat: "HH:mm", // Display time in hours and minutes
-										unit: "hour",
-										stepSize: 1,
-										displayFormats: {
-											hour: "HH:mm", // Display x-axis in 24-hour format
+				{glucoseReadings.length === 0 ? (
+						<div style={{ textAlign: "center", padding: "100px" }}>
+							<p>No glucose data available.</p>
+							<a href="/api/dexcom_login" style={{ color: 'blue', textDecoration: 'underline' }}>
+								Click here to link your Dexcom.
+							</a>
+						</div>
+					) : (
+						<Line
+							data={data}
+							options={{
+								responsive: true,
+								maintainAspectRatio: false,
+								fullSize: true,
+								layout: { padding: 0 },
+								scales: {
+									x: {
+										type: "time",
+										time: {
+											tooltipFormat: "HH:mm",
+											unit: "hour",
+											stepSize: 1,
+											displayFormats: {
+												hour: "HH:mm",
+											},
+										},
+										title: { display: true, text: "Time (24-Hour Format)" },
+										min: "2024-09-22T00:00:00",
+										max: "2024-09-22T23:59:59",
+									},
+									y: {
+										title: { display: true, text: "Glucose Level (mg/dL)" },
+										beginAtZero: false,
+										min: Math.min(...glucoseReadings.map(reading => reading.value)) * 0.95,
+										max: Math.max(...glucoseReadings.map(reading => reading.value)) * 1.05,
+									},
+								},
+								plugins: {
+									legend: {
+										display: true,
+										position: "top",
+										align: "center",
+										labels: {
+											usePointStyle: true,
+											padding: 20,
 										},
 									},
-									title: {
-										display: true,
-										text: "Time (24-Hour Format)",
-									},
-									min: "2024-09-22T00:00:00",
-									max: "2024-09-22T23:59:59",
 								},
-								y: {
-									title: {
-										display: true,
-										text: "Glucose Level (mg/dL)",
-									},
-									beginAtZero: false,
-									min: Math.min(...glucoseReadings.map(reading => reading.value)) * 0.95,
-									max: Math.max(...glucoseReadings.map(reading => reading.value)) * 1.05,
+								onClick: (event) => {
+									const markerType = window.prompt("Enter 'food' or 'exercise' to mark the event:");
+									if (markerType === "food" || markerType === "exercise") {
+										handleChartClick(event, markerType);
+									}
 								},
-							},
-							plugins: {
-								legend: {
-									display: true,
-									position: "top",
-									align: "center",
-									labels: {
-										usePointStyle: true,
-										padding: 20,
-									},
-								},
-							},
-							onClick: (event) => {
-								const markerType = window.prompt(
-									"Enter 'food' or 'exercise' to mark the event:"
-								);
-								if (markerType === "food" || markerType === "exercise") {
-									handleChartClick(event, markerType);
-								}
-							},
-						}}
-					/>
+							}}
+						/>
+					)}
 				</div>
 			</div>
 			<div className="dashboard-second-div">

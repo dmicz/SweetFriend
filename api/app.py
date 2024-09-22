@@ -59,7 +59,7 @@ db = client.dexcom_db
 # Dexcom API: OAuth2 and Data Fetching
 # ==========================
 
-@app.route('/login')
+@app.route('/api/dexcom_login')
 def login():
     auth_url = f"{DEXCOM_API_URL}/v2/oauth2/login?client_id={app.config['DEXCOM_CLIENT']}&redirect_uri={HTTP_PREFIX + app.config['SERVER_NAME'] + '/callback'}&response_type=code&scope=offline_access"
     return redirect(auth_url)
@@ -95,8 +95,7 @@ def callback():
     fetch_and_store_events(access_token)
     fetch_and_store_alerts(access_token)
     fetch_and_store_calibrations(access_token)
-
-    return jsonify({'message': 'Data fetched and stored successfully'})
+    return redirect('/app/dashboard')
 
 
 
@@ -544,7 +543,7 @@ def user_register():
         'password': hashed_password
     })
 
-    return redirect('http://localhost:5173/')
+    return redirect('/')
 
 @app.route('/api/signout')
 def user_signout():
