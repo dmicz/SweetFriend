@@ -1,9 +1,30 @@
 import "../styles/Header.css";
 import icon from "../assets/icon.svg";
 import PropTypes from "prop-types";
-import { Link } from "react-router-dom"; // Import Link from react-router-dom
+import { Link, useLocation } from "react-router-dom"; // Import useLocation to get the current URL
+import { useEffect } from "react";
 
 function Header({ activePage, onPageChange }) {
+	const location = useLocation(); // Get the current URL location
+
+	// Set the active page based on the URL path during the initial render
+	const determineActivePage = (path) => {
+		if (path.includes("dashboard")) {
+			return "Dashboard";
+		} else if (path.includes("logs")) {
+			return "Logs";
+		} else if (path.includes("chatbot")) {
+			return "Chatbot";
+		}
+		return "Dashboard"; // Default to Dashboard if no match
+	};
+
+	// Get the initial active page value based on the URL
+	useEffect(() => {
+		const initialPage = determineActivePage(location.pathname);
+		onPageChange(initialPage); // Set the correct active page during the initial render
+	}, [location, onPageChange]);
+
 	return (
 		<div className="header">
 			<Link

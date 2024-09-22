@@ -3,7 +3,8 @@ import filterIcon from "../assets/filter.svg";
 import sortIcon from "../assets/sort.svg";
 import "../styles/Log.css";
 import List from "./List";
-import Modal from "./Modal"; // Import the modal component
+import Modal from "./Modal";
+import AddLogModal from "./AddLogModal"; // New modal component for adding logs
 
 const itemsData = [
 	{
@@ -45,7 +46,7 @@ function Log() {
 		exercise: true,
 		starred: false,
 	});
-
+	const [showAddLogModal, setShowAddLogModal] = useState(false); // Modal state for adding log
 	const [selectedItem, setSelectedItem] = useState(null); // State to track the selected item
 
 	useEffect(() => {
@@ -118,6 +119,12 @@ function Log() {
 		setSelectedItem(null);
 	};
 
+	// Function to handle adding a new log
+	const addNewLog = (newLog) => {
+		setItems([newLog, ...items]);
+		setShowAddLogModal(false); // Close the add log modal
+	};
+
 	return (
 		<div className="log">
 			<div className="list-header">
@@ -133,6 +140,14 @@ function Log() {
 					<button className="sort-button" onClick={sortItemsByName}>
 						Sort
 						<img src={sortIcon} alt="Sort Icon" />
+					</button>
+
+					{/* Add Log Button */}
+					<button
+						className="add-log-button"
+						onClick={() => setShowAddLogModal(true)}
+					>
+						Add Log
 					</button>
 				</div>
 			</div>
@@ -181,6 +196,14 @@ function Log() {
 
 			{/* Modal for displaying item details */}
 			{selectedItem && <Modal item={selectedItem} onClose={closeModal} />}
+
+			{/* Modal for adding a new log */}
+			{showAddLogModal && (
+				<AddLogModal
+					onClose={() => setShowAddLogModal(false)}
+					onSubmit={addNewLog}
+				/>
+			)}
 		</div>
 	);
 }
