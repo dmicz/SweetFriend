@@ -41,6 +41,7 @@ const itemsData = [
 function Log() {
 	const [items, setItems] = useState(itemsData);
 	const [allItems, setAllItems] = useState(itemsData);
+	const [searchQuery, setSearchQuery] = useState(""); // New state for search query
 	const [showFilters, setShowFilters] = useState(false);
 	const [showSort, setShowSort] = useState(false);
 	const [filters, setFilters] = useState({
@@ -145,32 +146,22 @@ function Log() {
 	// Function to handle adding a new log
 	const addNewLog = (newLog) => {
 		setItems([newLog, ...items]);
-		// Determine the type of log and the appropriate API endpoint
-		const endpoint =
-			newLog.type.toLowerCase() === "food"
-				? "/api/food_entry"
-				: "/api/exercise_entry";
-		console.log("Adding new log entry:", newLog);
-		// Send the new log to the server
-		fetch(endpoint, {
-			method: "POST",
-			headers: {
-				"Content-Type": "application/json",
-			},
-			body: JSON.stringify(newLog),
-		})
-			.then((response) => response.json())
-			.then((data) => {
-				if (data.status === "success") {
-					console.log("Log entry added successfully:", data.entry);
-				} else {
-					console.error("Failed to add log entry:", data.message);
-				}
-			})
-			.catch((error) => {
-				console.error("Error adding log entry:", error);
-			});
 		setShowAddLogModal(false); // Close the add log modal
+	};
+
+	// Handle search functionality
+	const handleSearch = (e) => {
+		const query = e.target.value.toLowerCase();
+		setSearchQuery(query);
+
+		if (query) {
+			const filteredItems = allItems.filter((item) =>
+				item.name.toLowerCase().includes(query)
+			);
+			setItems(filteredItems);
+		} else {
+			setItems(allItems); // Reset to all items if search query is cleared
+		}
 	};
 
 	return (
@@ -179,6 +170,13 @@ function Log() {
 				<h2>Logs</h2>
 
 				{/* Add search bar here */}
+				<input
+					type="text"
+					placeholder="Search logs"
+					value={searchQuery}
+					onChange={handleSearch}
+					className="search-bar"
+				/>
 
 				<div className="log-buttons">
 					{/* Filter Button */}
