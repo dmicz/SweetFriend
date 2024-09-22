@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import "../styles/AddLogModal.css"; // Add CSS for modal styling
 import PropTypes from "prop-types";
+import ReactMarkdown from "react-markdown";
 
 function AddLogModal({ onClose, onSubmit }) {
 	AddLogModal.propTypes = {
@@ -170,7 +171,9 @@ function AddLogModal({ onClose, onSubmit }) {
 							{reason && (
 								<div id="reason-box">
 									<h4>Reasoning:</h4>
-									<p>{reason}</p>
+									<div id="reason-markdown">
+										<ReactMarkdown>{reason}</ReactMarkdown>
+									</div>
 								</div>
 							)}
 							<div className="form-buttons">

@@ -145,6 +145,31 @@ function Log() {
 	// Function to handle adding a new log
 	const addNewLog = (newLog) => {
 		setItems([newLog, ...items]);
+		// Determine the type of log and the appropriate API endpoint
+		const endpoint =
+			newLog.type.toLowerCase() === "food"
+				? "/api/food_entry"
+				: "/api/exercise_entry";
+		console.log("Adding new log entry:", newLog);
+		// Send the new log to the server
+		fetch(endpoint, {
+			method: "POST",
+			headers: {
+				"Content-Type": "application/json",
+			},
+			body: JSON.stringify(newLog),
+		})
+			.then((response) => response.json())
+			.then((data) => {
+				if (data.status === "success") {
+					console.log("Log entry added successfully:", data.entry);
+				} else {
+					console.error("Failed to add log entry:", data.message);
+				}
+			})
+			.catch((error) => {
+				console.error("Error adding log entry:", error);
+			});
 		setShowAddLogModal(false); // Close the add log modal
 	};
 
@@ -271,7 +296,7 @@ function Log() {
 			{/* List of Items */}
 			<List
 				items={items}
-				limit={5}
+				limit={15}
 				toggleStar={toggleStar}
 				onItemClick={handleItemClick}
 			/>
