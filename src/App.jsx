@@ -6,7 +6,6 @@ import "./App.css";
 import LoginForm from "./components/LoginForm/LoginForm";
 import RegisterForm from "./components/RegisterForm/RegisterForm";
 import { Route, Routes } from "react-router-dom";
-import Home from "./Home";
 import "./index.css";
 import ChatBot from "./components/Chatbot";
 
@@ -23,7 +22,6 @@ function App() {
 			<Routes>
 				<Route path="/" element={<LoginForm />} />
 				<Route path="/register" element={<RegisterForm />} />
-				<Route path="/home" element={<Home />} />
 
 				{/* Route for Dashboard, Logs, and ChatBot pages */}
 				<Route

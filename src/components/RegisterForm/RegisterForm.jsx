@@ -6,7 +6,7 @@ import { useNavigate } from "react-router-dom";
 const RegisterForm = () => {
     const navigate= useNavigate();
     function handleClick(){
-        navigate("/home");
+        navigate("/app/dashboard");
     }
   return (
     <div className='dialog'>
