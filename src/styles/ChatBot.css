@@ -87,3 +87,9 @@
 	cursor: pointer;
 	border-radius: 2em;
 }
+
+.disclaimer {
+	font-size: 0.8rem;
+	color: grey;
+	margin: 0;
+}
