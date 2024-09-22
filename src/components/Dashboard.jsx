@@ -10,9 +10,10 @@ import { DateTime } from 'luxon';
 import ReactMarkdown from "react-markdown";
 import List from "./List";
 import Modal from "./Modal";
+import AddLogModal from "./AddLogModal"; // Import the AddLogModal component
 
 function Dashboard() {
-	// eslint-disable-next-line no-unused-vars
+	// State management
 	const [glucoseReadings, setGlucoseReadings] = useState([]);
 	const [items, setItems] = useState([]);
 	const [selectedItem, setSelectedItem] = useState(null); // State to track the selected item
@@ -20,58 +21,8 @@ function Dashboard() {
 		food: [],
 		exercise: [],
 	});
-	const [aiSuggestion, setAiSuggestion] = useState("Random AI suggestions will be displayed here. For example, &quot;You \
-			should drink more water&quot; or &quot;You should go for a \
-			walk.&quot;");
-
-	useEffect(() => {
-		const fetchLogEntries = async () => {
-			try {
-			const response = await fetch("/api/log_entries");
-			const data = await response.json();
-			if (data.status === "success") {
-				setItems(data.entries);
-	
-				// Extract food and exercise markers from entries
-				const foodMarkers = data.entries
-				.filter((entry) => entry.type === "Food")
-				.map((entry) => ({
-					x: DateTime.fromISO(entry.timestamp).toJSDate(),
-					y: Math.max(...glucoseReadings.map(reading => reading.value)), // y is not needed for markers, just the timestamp
-				}));
-	
-				const exerciseMarkers = data.entries
-				.filter((entry) => entry.type === "Exercise")
-				.map((entry) => ({
-					x: DateTime.fromISO(entry.timestamp).toJSDate(),
-					y: 100,
-				}));
-	
-				setMarkers({
-				food: foodMarkers,
-				exercise: exerciseMarkers,
-				});
-			} else {
-				console.error("Failed to fetch entries:", data.message);
-			}
-			} catch (error) {
-			console.error("Error fetching log entries:", error);
-			}
-		};
-			
-	fetchLogEntries();
-	}, []);
-
-							
-	// Function to show the modal with the selected item details
-	const handleItemClick = (item) => {
-		setSelectedItem(item);
-	};
-
-	// Function to close the modal
-	const closeModal = () => {
-		setSelectedItem(null);
-	};
+	const [aiSuggestion, setAiSuggestion] = useState("Random AI suggestions will be displayed here...");
+	const [isAddLogModalOpen, setIsAddLogModalOpen] = useState(false); // State to manage AddLogModal visibility
 
 	useEffect(() => {
 		const fetchLogEntries = async () => {
@@ -80,6 +31,26 @@ function Dashboard() {
 				const data = await response.json();
 				if (data.status === "success") {
 					setItems(data.entries);
+
+					// Extract food and exercise markers from entries
+					const foodMarkers = data.entries
+						.filter((entry) => entry.type === "Food")
+						.map((entry) => ({
+							x: DateTime.fromISO(entry.timestamp).toJSDate(),
+							y: 120,
+						}));
+
+					const exerciseMarkers = data.entries
+						.filter((entry) => entry.type === "Exercise")
+						.map((entry) => ({
+							x: DateTime.fromISO(entry.timestamp).toJSDate(),
+							y: 100,
+						}));
+
+					setMarkers({
+						food: foodMarkers,
+						exercise: exerciseMarkers,
+					});
 				} else {
 					console.error("Failed to fetch entries:", data.message);
 				}
@@ -91,51 +62,81 @@ function Dashboard() {
 		fetchLogEntries();
 	}, []);
 
+	// Function to show the modal with the selected item details
+	const handleItemClick = (item) => {
+		setSelectedItem(item);
+	};
+
+	// Function to close the modal
+	const closeModal = () => {
+		setSelectedItem(null);
+	};
+
+	// Toggle the AddLogModal
+	const openAddLogModal = () => {
+		setIsAddLogModalOpen(true);
+	};
+
+	const closeAddLogModal = () => {
+		setIsAddLogModalOpen(false);
+	};
+
+	// Function to handle the submission of a new log
+	const handleAddLogSubmit = (newLog) => {
+		if (newLog.type === "food") {
+			setMarkers((prevMarkers) => ({
+				...prevMarkers,
+				food: [...prevMarkers.food, { x: new Date(newLog.timestamp), y: 120 }],
+			}));
+		} else if (newLog.type === "exercise") {
+			setMarkers((prevMarkers) => ({
+				...prevMarkers,
+				exercise: [...prevMarkers.exercise, { x: new Date(newLog.timestamp), y: 100 }],
+			}));
+		}
+
+		// Close the modal after submitting the log
+		closeAddLogModal();
+	};
+
 	const toggleStar = (index) => {
 		const updatedItems = [...items];
 		updatedItems[index].starred = !updatedItems[index].starred; // Toggle starred
 		setItems(updatedItems);
 	};
 
-
-	const fetchGlucoseReadings = async () => {
-		try {
-			const response = await fetch("/api/get_glucose");
-			const data = await response.json();
-
-			// Map the API response to the expected format
-			const formattedData = data.map((reading) => ({
-				time: DateTime.fromISO(reading.systemTime, { zone: "utc" }) // Set timezone to UTC
-					.toFormat("HH:mm"),
-
-				value: reading.value,
-			}));
-
-			setGlucoseReadings(formattedData);
-		} catch (error) {
-			console.error("Error fetching glucose readings:", error);
-		}
-	};
-
-	const fetchAiSuggestion = async () => {
-		try {
-			const response = await fetch("/api/get_advice");
-			const data = await response.json();
-			setAiSuggestion(data.response); // Set the AI suggestion response
-		} catch (error) {
-			console.error("Error fetching AI suggestion:", error);
-		}
-	};
-
-
+	// Fetch glucose readings and AI suggestions
 	useEffect(() => {
+		const fetchGlucoseReadings = async () => {
+			try {
+				const response = await fetch("/api/get_glucose");
+				const data = await response.json();
+
+				// Map the API response to the expected format
+				const formattedData = data.map((reading) => ({
+					time: DateTime.fromISO(reading.systemTime, { zone: "utc" }).toFormat("HH:mm"),
+					value: reading.value,
+				}));
+
+				setGlucoseReadings(formattedData);
+			} catch (error) {
+				console.error("Error fetching glucose readings:", error);
+			}
+		};
+
+		const fetchAiSuggestion = async () => {
+			try {
+				const response = await fetch("/api/get_advice");
+				const data = await response.json();
+				setAiSuggestion(data.response); // Set the AI suggestion response
+			} catch (error) {
+				console.error("Error fetching AI suggestion:", error);
+			}
+		};
+
 		fetchGlucoseReadings();
 		fetchAiSuggestion();
 	}, []);
-
-	useEffect(() => {
-		console.log("Updated glucoseReadings:", glucoseReadings);
-	}, [glucoseReadings]);
 
 	// Line chart data
 	const data = {
@@ -146,16 +147,14 @@ function Dashboard() {
 				data: glucoseReadings.map((reading) => reading.value),
 				borderColor: "rgba(75, 192, 192, 1)",
 			},
-			// Food markers
 			{
 				label: "Food",
 				data: markers.food,
 				pointRadius: 6,
 				pointBackgroundColor: "red",
 				pointStyle: "circle",
-				showLine: false, // Do not connect the markers
+				showLine: false,
 			},
-			// Exercise markers
 			{
 				label: "Exercise",
 				data: markers.exercise,
@@ -167,39 +166,12 @@ function Dashboard() {
 		],
 	};
 
-	// Handle chart click to add a marker for either food or exercise
-	const handleChartClick = (event, type) => {
-		const chart = event.chart;
-
-		// Get the exact relative position of the click on the canvas
-		const canvasPosition = getRelativePosition(event, chart);
-
-		// Use the relative position to get the exact data coordinates
-		const xValue = chart.scales.x.getValueForPixel(canvasPosition.x); // Time in hours
-		const yValue = chart.scales.y.getValueForPixel(canvasPosition.y); // Glucose value
-
-		// Add new marker based on the type (food or exercise)
-		const newMarker = { x: xValue, y: yValue };
-
-		setMarkers((prevMarkers) => {
-			if (type === "food") {
-				return { ...prevMarkers, food: [...prevMarkers.food, newMarker] };
-			} else if (type === "exercise") {
-				return {
-					...prevMarkers,
-					exercise: [...prevMarkers.exercise, newMarker],
-				};
-			}
-			return prevMarkers;
-		});
-	};
-
 	return (
 		<div className="dashboard-page">
 			<div className="dashboard-first-div">
 				{/* Line chart for glucose readings */}
 				<div style={{ height: "400px", width: "100%", cursor: "pointer" }}>
-				{glucoseReadings.length === 0 ? (
+					{glucoseReadings.length === 0 ? (
 						<div style={{ textAlign: "center", padding: "100px" }}>
 							<p>No glucose data available.</p>
 							<a href="/api/dexcom_login" style={{ color: 'blue', textDecoration: 'underline' }}>
@@ -221,13 +193,9 @@ function Dashboard() {
 											tooltipFormat: "HH:mm",
 											unit: "hour",
 											stepSize: 1,
-											displayFormats: {
-												hour: "HH:mm",
-											},
+											displayFormats: { hour: "HH:mm" },
 										},
 										title: { display: true, text: "Time (24-Hour Format)" },
-										min: "2024-09-22T00:00:00",
-										max: "2024-09-22T23:59:59",
 									},
 									y: {
 										title: { display: true, text: "Glucose Level (mg/dL)" },
@@ -241,17 +209,8 @@ function Dashboard() {
 										display: true,
 										position: "top",
 										align: "center",
-										labels: {
-											usePointStyle: true,
-											padding: 20,
-										},
+										labels: { usePointStyle: true, padding: 20 },
 									},
-								},
-								onClick: (event) => {
-									const markerType = window.prompt("Enter 'food' or 'exercise' to mark the event:");
-									if (markerType === "food" || markerType === "exercise") {
-										handleChartClick(event, markerType);
-									}
 								},
 							}}
 						/>
@@ -266,7 +225,7 @@ function Dashboard() {
 					</div>
 					<ReactMarkdown>{aiSuggestion || "Loading AI suggestion..."}</ReactMarkdown>
 					<p className="disclaimer">
-						Disclaimer: The AI suggestions provided are generated by a language model and should not be considered medical advice. Always consult with a healthcare professional for medical advice and treatment.
+						Disclaimer: The AI suggestions provided are generated by a language model and should not be considered medical advice.
 					</p>
 				</div>
 				<div className="recent-logs">
@@ -274,13 +233,20 @@ function Dashboard() {
 						<img src={recentIcon} alt="Recent Icon" />
 						<h3>Recent Logs</h3>
 					</div>
-					
 					<div className="small-log">
 						<List items={items} limit={5} toggleStar={toggleStar} onItemClick={handleItemClick} />
-						{selectedItem && <Modal item={selectedItem} onClose={closeModal} />}
+						{selectedItem && <Modal logData={selectedItem} onClose={closeModal} />}
 					</div>
 				</div>
 			</div>
+
+			{/* AddLogModal for adding new logs */}
+			{isAddLogModalOpen && (
+				<AddLogModal
+					onClose={closeAddLogModal}
+					onSubmit={handleAddLogSubmit}
+				/>
+			)}
 		</div>
 	);
 }
