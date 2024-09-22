@@ -19,7 +19,7 @@ function Dashboard() {
 
 	const fetchGlucoseReadings = async () => {
 		try {
-			const response = await fetch("http://localhost:5000/api/get_glucose");
+			const response = await fetch("https://sweet-friend.vercel.app/api/get_glucose");
 			const data = await response.json();
 
 			// Map the API response to the expected format
