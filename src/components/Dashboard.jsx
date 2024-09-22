@@ -7,6 +7,7 @@ import aiIcon from "../assets/ai.svg";
 import recentIcon from "../assets/recent.svg";
 import "../styles/Dashboard.css";
 import { DateTime } from 'luxon';
+import ReactMarkdown from "react-markdown";
 
 function Dashboard() {
 	// eslint-disable-next-line no-unused-vars
@@ -188,7 +189,7 @@ function Dashboard() {
 						<img src={aiIcon} alt="AI Icon" />
 						<h3>AI suggestions</h3>
 					</div>
-					<p>{aiSuggestion || "Loading AI suggestion..."}</p>
+					<ReactMarkdown>{aiSuggestion || "Loading AI suggestion..."}</ReactMarkdown>
 				</div>
 				<div className="recent-logs">
 					<div className="dashboard-second-header">

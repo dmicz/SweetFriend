@@ -1,15 +1,8 @@
-import { useState } from "react";
 import "../styles/Header.css";
 import icon from "../assets/icon.svg";
+import PropTypes from "prop-types";
 
-function Header() {
-	const [activePage, setActivePage] = useState("Dashboard");
-
-	// Function to handle page changes and set the active page
-	const handlePageChange = (page) => {
-		setActivePage(page);
-	};
-
+function Header({ activePage, onPageChange }) {
 	const handleTitleClick = () => {
 		window.location.reload();
 	};
@@ -24,20 +17,33 @@ function Header() {
 				<a
 					href="#dashboard"
 					className={activePage === "Dashboard" ? "active" : ""}
-					onClick={() => handlePageChange("Dashboard")}
+					onClick={() => onPageChange("Dashboard")}
 				>
 					Dashboard
 				</a>
 				<a
 					href="#logs"
 					className={activePage === "Logs" ? "active" : ""}
-					onClick={() => handlePageChange("Logs")}
+					onClick={() => onPageChange("Logs")}
 				>
 					Logs
+				</a>
+
+				<a
+					href="#chatbot"
+					className={activePage === "Chatbot" ? "active" : ""}
+					onClick={() => handlePageChange("Chatbot")}
+				>
+					ChatBot
 				</a>
 			</div>
 		</div>
 	);
 }
+
+Header.propTypes = {
+	activePage: PropTypes.string.isRequired,
+	onPageChange: PropTypes.func.isRequired,
+};
 
 export default Header;

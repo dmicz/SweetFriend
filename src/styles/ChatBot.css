@@ -1,0 +1,85 @@
+/* Chat container styles */
+.chat-container {
+    display: flex;
+    flex-direction: column;
+    height: 90vh; /* Full height of the viewport */
+    width: 100%;
+    max-width: 100%; /* Ensure it takes up the available width */
+    border: 1px solid #ccc;
+    border-radius: 10px;
+    background-color: #1e1e1e;
+    color: white;
+  }
+  
+  /* Chat window styles */
+  .chat-window {
+    flex-grow: 1; /* Allow the chat window to grow but not push content down */
+    padding: 10px;
+    overflow-y: auto; /* Scroll if messages overflow */
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end; /* Align messages to the bottom */
+  }
+  
+  /* Chat bubble styles */
+  .chat-bubble {
+    margin: 10px 0;
+    padding: 20px 30px;
+    border-radius: 10px;
+    width: fit-content;
+    max-width: 80%;
+    text-align: left;
+  }
+
+  .chat-bubble {
+    font-weight: 400;
+    font-size: 1.2em;
+  }
+
+  .chat-bubble p {
+    margin: 0;
+  }
+  
+  .robot {
+    background-color: #444;
+    align-self: flex-start;
+  }
+  
+  .user {
+    background-color: #0084ff;
+    align-self: flex-end;
+    color: white;
+  }
+  
+  /* Input container and styles */
+  .input-container {
+    display: flex;
+    padding: 10px;
+    border-top: 1px solid #ccc;
+    background-color: #333;
+  }
+  
+  .input-container textarea {
+    flex: 1;
+    padding: 10px;
+    border-radius: 5px;
+    border: none;
+    outline: none;
+    font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+    width: 100%;
+    max-height: 300px;
+    overflow-y: auto;
+    resize: none;
+    font-size: 1.2em;
+  }
+  
+  .input-container button {
+    margin-left: 10px;
+    padding: 10px;
+    background-color: #0084ff;
+    border: none;
+    color: white;
+    cursor: pointer;
+    border-radius: 5px;
+  }
+  

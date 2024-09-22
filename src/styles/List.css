@@ -1,0 +1,8 @@
+.star-icon {
+	cursor: pointer;
+	transition: transform 0.1s;
+}
+.star-icon:hover {
+	cursor: pointer;
+	transform: scale(1.2);
+}
