@@ -124,6 +124,7 @@ def fetch_and_store_glucose(access_token):
     response = requests.get(glucose_url, headers=headers, params=params)
     glucose_data = response.json()
 
+    print(glucose_data)
     for reading in glucose_data.get('records', []):
         db.glucose_readings.insert_one({
             'system_time': reading['systemTime'],
@@ -144,6 +145,7 @@ def fetch_and_store_events(access_token):
     response = requests.get(events_url, headers=headers, params=params)
     event_data = response.json()
 
+    print(event_data)
     for event in event_data.get('records', []):
         db.dexcom_events.insert_one({
             'system_time': event['systemTime'],
@@ -166,6 +168,7 @@ def fetch_and_store_alerts(access_token):
     response = requests.get(alerts_url, headers=headers, params=params)
     alert_data = response.json()
 
+    print(alert_data)
     for alert in alert_data.get('records', []):
         db.glucose_alerts.insert_one({
             'alert_id': alert['alertId'],
@@ -187,6 +190,7 @@ def fetch_and_store_calibrations(access_token):
     response = requests.get(calibrations_url, headers=headers, params=params)
     calibration_data = response.json()
 
+    print(calibration_data)
     for calibration in calibration_data.get('records', []):
         db.calibrations.insert_one({
             'system_time': calibration['systemTime'],
