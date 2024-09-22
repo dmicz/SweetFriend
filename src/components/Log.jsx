@@ -162,7 +162,7 @@ function Log() {
 		setItems([newLog, ...items]);
 		// Determine the type of log and the appropriate API endpoint
 		const endpoint =
-			newLog.type === "Food" ? "/api/food_entry" : "/api/exercise_entry";
+			newLog.type.toLowerCase() === "food" ? "/api/food_entry" : "/api/exercise_entry";
 		console.log("Adding new log entry:", newLog);
 		// Send the new log to the server
 		fetch(endpoint, {
