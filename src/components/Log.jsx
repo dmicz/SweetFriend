@@ -54,9 +54,14 @@ function Log() {
 			try {
 				const response = await fetch("/api/log_entries");
 				const data = await response.json();
+				
 				if (data.status === "success") {
-					setItems(data.entries);
-					setAllItems(data.entries);
+					const entriesWithDate = data.entries.map(entry => ({
+						...entry,
+						timestamp: new Date(entry.timestamp)
+					}));
+					setItems(entriesWithDate);
+					setAllItems(entriesWithDate);
 				} else {
 					console.error("Failed to fetch entries:", data.message);
 				}
