@@ -196,6 +196,7 @@ function Dashboard() {
 											displayFormats: { hour: "HH:mm" },
 										},
 										title: { display: true, text: "Time (24-Hour Format)" },
+										min: Math.min(...glucoseReadings.map(reading => DateTime.fromFormat(reading.time, "HH:mm").toMillis())),
 									},
 									y: {
 										title: { display: true, text: "Glucose Level (mg/dL)" },
