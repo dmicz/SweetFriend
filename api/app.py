@@ -366,7 +366,7 @@ def chat():
     print(context)
     try:
         chat_completion = cerebras_client.chat.completions.create(
-            model = "llama3.1-70b",
+            model = "llama-3.3-70b",
             messages = [
                 {
                     "role": "system",
@@ -416,7 +416,7 @@ def get_advice():
 
     try:
         chat_completion = cerebras_client.chat.completions.create(
-            model="llama3.1-70b",
+            model="llama-3.3-70b",
             messages=[
                 {
                     "role": "system",
